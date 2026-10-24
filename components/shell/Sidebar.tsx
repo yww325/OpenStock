@@ -8,6 +8,7 @@ import { openSearch } from "@/components/SearchCommand";
 import { signOut } from "@/lib/actions/auth.actions";
 import { cn } from "@/lib/utils";
 import { SIDEBAR_SPONSOR_SLOTS, sidebarSponsors } from "@/lib/sponsors";
+import { assetUrl } from "@/lib/base-path";
 
 type SidebarProps = {
     user: User;
@@ -35,7 +36,7 @@ const Sidebar = ({ user, watchlist }: SidebarProps) => {
     return (
         <aside className="sidebar">
             <Link href="/dashboard" className="px-2 pt-1 pb-2" aria-label="OpenStock dashboard">
-                <Image src="/assets/images/logo.png" alt="OpenStock" width={150} height={38} priority />
+                <Image src={assetUrl("/assets/images/logo.png")} alt="OpenStock" width={150} height={38} priority />
             </Link>
 
             <button type="button" onClick={openSearch} className="side-cta">
@@ -94,7 +95,7 @@ const Sidebar = ({ user, watchlist }: SidebarProps) => {
             <div className="flex flex-col gap-1.5">
                 {partners.map((sponsor) => (
                     <a key={sponsor.name} href={sponsor.url} target="_blank" rel="noreferrer" title={sponsor.name} className="flex h-11 items-center gap-2.5 rounded-[11px] px-3 shadow-[inset_0_0_0_1px_var(--line)] transition-colors hover:bg-white/5">
-                        {sponsor.logo && <img src={sponsor.logo} alt={sponsor.iconOnly ? '' : sponsor.name} className="h-5 w-auto max-w-[120px]" />}
+                        {sponsor.logo && <img src={assetUrl(sponsor.logo)} alt={sponsor.iconOnly ? '' : sponsor.name} className="h-5 w-auto max-w-[120px]" />}
                         {(!sponsor.logo || sponsor.iconOnly) && <span className="truncate text-[13px] font-semibold text-muted-foreground">{sponsor.name}</span>}
                         <span className="kicker ml-auto">Sponsor</span>
                     </a>

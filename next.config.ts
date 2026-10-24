@@ -1,6 +1,14 @@
 import type { NextConfig } from "next";
 
+// The app can be served from a sub-path, e.g. https://example.com/OpenStock.
+// Next.js bakes this into the build, so it is read at build time.
+const configuredBasePath = process.env.NEXT_PUBLIC_BASE_PATH?.trim() ?? '';
+const basePath = configuredBasePath && configuredBasePath !== '/'
+    ? (configuredBasePath.startsWith('/') ? configuredBasePath : `/${configuredBasePath}`).replace(/\/+$/, '')
+    : '';
+
 const nextConfig: NextConfig = {
+    basePath,
     devIndicators: false,
     // /whats-new was live briefly before the changelog replaced it
     async redirects() {

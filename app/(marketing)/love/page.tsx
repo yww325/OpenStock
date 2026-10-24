@@ -5,6 +5,7 @@ import PageHero from "@/components/marketing/PageHero";
 import SectionHead from "@/components/marketing/SectionHead";
 import { REPO_URL } from "@/lib/constants";
 import { ACTIVE_SPONSORS, PREVIOUS_SPONSORS, SPONSOR_TIERS, SUPPORTERS, type Sponsor } from "@/lib/sponsors";
+import { assetUrl } from "@/lib/base-path";
 import { cn } from "@/lib/utils";
 
 export const metadata = {
@@ -70,7 +71,7 @@ const Chip = ({ item, copy }: { item: WallItem; copy: boolean }) => (
         className="mr-3 flex h-16 shrink-0 items-center gap-3 rounded-[14px] bg-card px-5 shadow-[inset_0_0_0_1px_var(--line)] transition-colors hover:bg-hover"
     >
         {item.avatar && <img src={item.avatar} alt="" width={32} height={32} loading="lazy" className="size-8 rounded-full" />}
-        {item.logo && <img src={item.logo} alt={item.iconOnly ? '' : item.name} className="h-6 w-auto" />}
+        {item.logo && <img src={assetUrl(item.logo)} alt={item.iconOnly ? '' : item.name} className="h-6 w-auto" />}
         <span className="flex flex-col gap-0.5">
             {(!item.logo || item.iconOnly) && <span className="text-[14px] font-semibold leading-none">{item.name}</span>}
             <span className="kicker leading-none">{item.label}</span>

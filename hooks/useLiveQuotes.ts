@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { isRealtime } from "@/lib/market-data";
+import { withBasePath } from "@/lib/base-path";
 
 export type LiveQuote = { c?: number; d?: number; dp?: number; h?: number; l?: number; o?: number; pc?: number; t?: number };
 
@@ -18,7 +19,7 @@ export function useLiveQuotes(symbols: string[], intervalMs = 15_000) {
         const load = async () => {
             if (document.visibilityState !== "visible") return;
             try {
-                const res = await fetch(`/api/quotes?symbols=${encodeURIComponent(key)}`);
+                const res = await fetch(`${withBasePath('/api/quotes')}?symbols=${encodeURIComponent(key)}`);
                 if (res.ok && !cancelled) setQuotes(await res.json());
             } catch { /* keep the last good prices */ }
         };

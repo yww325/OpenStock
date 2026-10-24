@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionCookie } from 'better-auth/cookies';
 import { isPublicPath } from '@/lib/public-paths';
+import { withBasePath } from '@/lib/base-path';
 
 export async function middleware(request: NextRequest) {
     // Marketing, public ticker and comparison pages, robots.txt and sitemap.xml.
@@ -11,7 +12,8 @@ export async function middleware(request: NextRequest) {
 
     // Check cookie presence - prevents obviously unauthorized users
     if (!sessionCookie) {
-        return NextResponse.redirect(new URL('/sign-in', request.url));
+        // The mount path is not part of nextUrl.pathname, so it has to be added back
+        return NextResponse.redirect(new URL(withBasePath('/sign-in'), request.url));
     }
 
     return NextResponse.next();

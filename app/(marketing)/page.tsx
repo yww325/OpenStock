@@ -8,6 +8,7 @@ import { getSession } from "@/lib/better-auth/auth";
 import { formatCount, getRepoStats } from "@/lib/github";
 import { cn } from "@/lib/utils";
 import { sidebarSponsors } from "@/lib/sponsors";
+import { assetUrl } from "@/lib/base-path";
 import { DISCORD_URL, GOOD_FIRST_ISSUES_URL, REPO_URL } from "@/lib/constants";
 
 const FEATURES = [
@@ -77,7 +78,7 @@ const SponsorBanner = () => {
             <a href={sponsor.url} target="_blank" rel="noreferrer" className="hatch group">
                 <div className="card flex flex-col gap-4 p-5">
                     <p className="kicker flex items-center gap-1.5 text-brand-ink"><span className="live-dot" /> Sponsor</p>
-                    {sponsor.logo && <img src={sponsor.logo} alt={sponsor.iconOnly ? '' : sponsor.name} className="h-14 w-auto self-start" />}
+                    {sponsor.logo && <img src={assetUrl(sponsor.logo)} alt={sponsor.iconOnly ? '' : sponsor.name} className="h-14 w-auto self-start" />}
                     <div>
                         <p className="text-[17px] font-bold tracking-[-0.02em]">{sponsor.name}</p>
                         {sponsor.blurb && <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">{sponsor.blurb}</p>}

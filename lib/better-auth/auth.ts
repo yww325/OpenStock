@@ -5,15 +5,36 @@ import {nextCookies} from "better-auth/next-js";
 import { headers } from "next/headers";
 import { cache } from "react";
 import { sendPasswordResetEmail } from "@/lib/nodemailer/reset-password";
+import { BASE_PATH } from "@/lib/base-path";
 
 
 type MongoDb = Parameters<typeof mongodbAdapter>[0];
+
+// Better Auth serves its API under /api/auth. When the app is mounted on a
+// sub-path the API moves with it, so the path is built from the mount path
+// instead of the default.
+const AUTH_BASE_PATH = `${BASE_PATH}/api/auth`;
+
+// BETTER_AUTH_URL is the public URL of the app, which can carry a sub-path.
+// Better Auth derives its own base path from the path of the base URL and does
+// not append one to a URL that already has a path, so the origin is passed
+// alone and the sub-path travels in AUTH_BASE_PATH.
+const AUTH_BASE_URL = (() => {
+    const configured = process.env.BETTER_AUTH_URL?.trim();
+    if (!configured) return undefined;
+    try {
+        return new URL(configured).origin;
+    } catch {
+        return configured;
+    }
+})();
 
 // Typed from the real config, so additional user fields (country, ...) show up in session types
 const createAuth = (database: MongoDb) => betterAuth({
         database: mongodbAdapter(database),
        secret: process.env.BETTER_AUTH_SECRET,
-        baseURL: process.env.BETTER_AUTH_URL,
+        baseURL: AUTH_BASE_URL,
+        basePath: AUTH_BASE_PATH,
         // Onboarding answers live on the user so the profile page can show and edit them
         user: {
             additionalFields: {

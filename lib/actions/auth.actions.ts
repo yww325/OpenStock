@@ -6,6 +6,7 @@ import { headers } from "next/headers";
 import { INVESTMENT_GOALS, PREFERRED_INDUSTRIES, RISK_TOLERANCE_OPTIONS } from "@/lib/constants";
 import countryList from "react-select-country-list";
 import { clientIp, isRateLimited, TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
+import { withBasePath } from "@/lib/base-path";
 
 const isOption = (options: readonly { value: string }[], value: unknown) => options.some((o) => o.value === value);
 const COUNTRY_CODES = new Set(countryList().getValues()); // the same list the sign-up country picker shows
@@ -84,7 +85,12 @@ export const signInWithEmail = async ({ email, password }: SignInFormData) => {
 export const signInWithSocial = async (provider: 'google' | 'github') => {
     try {
         const { url } = await auth.api.signInSocial({
-            body: { provider, callbackURL: '/dashboard', errorCallbackURL: '/sign-in' },
+            body: {
+                provider,
+                // Better Auth redirects to these paths as they are, so they need the mount path
+                callbackURL: withBasePath('/dashboard'),
+                errorCallbackURL: withBasePath('/sign-in'),
+            },
         });
         return { success: true, url }
     } catch (e) {

@@ -5,6 +5,7 @@ import {redirect} from "next/navigation";
 import {getSession} from "@/lib/better-auth/auth";
 import ProductPreview from "@/components/landing/ProductPreview";
 import { SocialProvidersProvider } from "@/components/forms/SocialAuthButtons";
+import { assetUrl } from "@/lib/base-path";
 
 const Layout = async ({ children }: { children : React.ReactNode }) => {
 
@@ -21,7 +22,7 @@ const Layout = async ({ children }: { children : React.ReactNode }) => {
         <main className="auth-layout">
             <section className="auth-left-section scrollbar-hide-default">
                 <Link href="/" className="auth-logo flex items-center gap-2">
-                    <Image src="/assets/images/logo.png" alt="OpenStock" width={140} height={35} priority />
+                    <Image src={assetUrl("/assets/images/logo.png")} alt="OpenStock" width={140} height={35} priority />
                 </Link>
 
                 <div className="pb-6 lg:pb-8 flex-1">
@@ -40,7 +41,7 @@ const Layout = async ({ children }: { children : React.ReactNode }) => {
                         </div>
                         <div className="flex items-center gap-0.5">
                             {[1,2,3,4,5].map((star) => (
-                                <Image src="/assets/icons/star.svg" alt="star" key={star} width={20} height={20} className="w-4 h-4"/>
+                                <Image src={assetUrl("/assets/icons/star.svg")} alt="star" key={star} width={20} height={20} className="w-4 h-4"/>
                             ))}
                         </div>
                     </div>

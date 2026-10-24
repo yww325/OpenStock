@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { ACTIVE_SPONSORS, PREVIOUS_SPONSORS, SPONSOR_CONTACT_EMAIL, SPONSOR_TIERS, SUPPORTERS, TIER_COLOR, tierBorder, type Sponsor, type SponsorTierId } from "@/lib/sponsors";
+import { assetUrl } from "@/lib/base-path";
 import { cn } from "@/lib/utils";
 
 const tile = 'flex h-14 items-center rounded-[12px] transition-opacity hover:opacity-90';
@@ -10,9 +11,9 @@ const ring = (tier: SponsorTierId) => ({ outline: `1px solid ${tierBorder(tier)}
 const SponsorMark = ({ sponsor, tier, muted }: { sponsor: Sponsor; tier: SponsorTierId; muted?: boolean }) => (
     <a href={sponsor.url} target="_blank" rel="noreferrer" title={sponsor.name} style={ring(tier)}
         className={cn(tile, sponsor.banner ? 'overflow-hidden' : 'min-w-[140px] justify-center gap-2 bg-page px-5')}>
-        {sponsor.banner ? <img src={sponsor.banner} alt={sponsor.name} className="h-full w-auto" /> : (
+        {sponsor.banner ? <img src={assetUrl(sponsor.banner)} alt={sponsor.name} className="h-full w-auto" /> : (
             <span className={cn('flex items-center gap-2', muted && 'opacity-55 grayscale')}>
-                {sponsor.logo && <img src={sponsor.logo} alt={sponsor.iconOnly ? '' : sponsor.name} className="h-6 w-auto" />}
+                {sponsor.logo && <img src={assetUrl(sponsor.logo)} alt={sponsor.iconOnly ? '' : sponsor.name} className="h-6 w-auto" />}
                 {(!sponsor.logo || sponsor.iconOnly) && <span className="font-bold">{sponsor.name}</span>}
                 {muted && sponsor.period && <span className="num text-[11px] text-faint">{sponsor.period}</span>}
             </span>
