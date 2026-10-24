@@ -5,6 +5,8 @@
 // The types are structural on purpose: they describe the parts of the Futu protocol this
 // file reads, not the SDK's generated types (the SDK ships no type definitions).
 
+import { toNumber, toOptionalNumber } from '@/lib/futu/numbers';
+
 export type FutuQuote = {
     c?: number;  // last price
     d?: number;  // change against the previous close
@@ -25,10 +27,10 @@ export type FutuSnapshot = {
         openPrice?: number;
         highPrice?: number;
         lowPrice?: number;
-        volume?: number;
+        volume?: number | string | { toNumber?: () => number };
         turnover?: number;
         updateTimestamp?: number;
-        lotSize?: number;
+        lotSize?: number | string | { toNumber?: () => number };
         isSuspend?: boolean;
     };
     equityExData?: {
@@ -52,7 +54,7 @@ export type FutuSecurityInfo = {
     suspended?: boolean;
 };
 
-const num = (value: number | undefined) => (typeof value === 'number' && Number.isFinite(value) ? value : undefined);
+const num = (value: number | string | { toNumber?: () => number } | undefined) => toOptionalNumber(value);
 
 export function snapshotToQuote(snapshot: FutuSnapshot): FutuQuote {
     const b = snapshot.basic ?? {};
@@ -68,7 +70,7 @@ export function snapshotToQuote(snapshot: FutuSnapshot): FutuQuote {
         l: num(b.lowPrice),
         o: num(b.openPrice),
         pc: prev,
-        t: b.updateTimestamp ? Math.floor(b.updateTimestamp) : undefined,
+        t: b.updateTimestamp ? Math.floor(toNumber(b.updateTimestamp)) : undefined,
     };
 }
 

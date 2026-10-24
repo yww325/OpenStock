@@ -102,6 +102,15 @@ describe('Futu snapshots', () => {
         expect(info.name).toBe('Tencent Holdings');
     });
 
+    it('reads the lot size when the SDK hands it over as a 64-bit number', () => {
+        const info = snapshotToSecurityInfo({
+            ...TENCENT,
+            basic: { ...TENCENT.basic, lotSize: { toNumber: () => 100 } },
+        }, 'Tencent Holdings');
+
+        expect(info.lotSize).toBe(100);
+    });
+
     it('falls back to the Futu name when the app has none', () => {
         const info = snapshotToSecurityInfo(TENCENT, '');
 

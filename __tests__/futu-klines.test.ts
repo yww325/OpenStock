@@ -55,6 +55,14 @@ describe('Futu bars', () => {
         });
     });
 
+    it('reads the volume when the SDK hands it over as a 64-bit number', () => {
+        // protobufjs decodes int64 as a Long object, not as a number
+        const long = { toNumber: () => 33161473 };
+        const [bar] = klToBars([{ ...TENCENT_BAR, volume: long }]);
+
+        expect(bar.volume).toBe(33161473);
+    });
+
     it('drops the blank bars a market holiday leaves behind', () => {
         const bars = klToBars([{ time: '2026-10-24 00:00:00', isBlank: true }, TENCENT_BAR]);
 
@@ -84,8 +92,10 @@ describe('pulling Hong Kong candles', () => {
         const first = await getKlines('0700.HK', '1y');
         const second = await getKlines('0700.HK', '1y');
 
-        expect(first?.[0].close).toBe(386);
-        expect(second).toEqual(first);
+        expect(first?.bars[0].close).toBe(386);
+        expect(first?.cached).toBe(false);
+        expect(second?.cached).toBe(true);
+        expect(second?.bars).toEqual(first?.bars);
         expect(requestHistoryKL).toHaveBeenCalledTimes(1);
     });
 
@@ -94,26 +104,28 @@ describe('pulling Hong Kong candles', () => {
 
         const [a, b] = await Promise.all([getKlines('0700.HK', '1y'), getKlines('0700.HK', '1y')]);
 
-        expect(a).toEqual(b);
+        expect(a?.bars).toEqual(b?.bars);
         expect(requestHistoryKL).toHaveBeenCalledTimes(1);
     });
 
-    it('asks for a different range separately', async () => {
+    it('cuts every range out of the same set, so switching range calls OpenD for nothing', async () => {
+        requestHistoryKL.mockResolvedValue({ s2c: { klList: [TENCENT_BAR, { ...TENCENT_BAR, time: '2026-10-22 00:00:00' }] } });
         const { getKlines } = await import('@/lib/futu/klines');
 
         await getKlines('0700.HK', '1y');
-        await getKlines('0700.HK', '1m');
+        const month = await getKlines('0700.HK', '1m');
 
-        expect(requestHistoryKL).toHaveBeenCalledTimes(2);
+        expect(requestHistoryKL).toHaveBeenCalledTimes(1);
+        expect(month?.bars).toHaveLength(2);
     });
 
     it('does not spend a history unit on a listing the account has never pulled', async () => {
         requestHistoryKLQuota.mockResolvedValue(okQuota(10));
         const { getKlines } = await import('@/lib/futu/klines');
 
-        const bars = await getKlines('0700.HK', '1y');
+        const result = await getKlines('0700.HK', '1y');
 
-        expect(bars).toBeNull();
+        expect(result).toBeNull();
         expect(requestHistoryKL).not.toHaveBeenCalled();
     });
 
@@ -121,9 +133,9 @@ describe('pulling Hong Kong candles', () => {
         requestHistoryKLQuota.mockResolvedValue(okQuota(10, ['00700']));
         const { getKlines } = await import('@/lib/futu/klines');
 
-        const bars = await getKlines('0700.HK', '1y');
+        const result = await getKlines('0700.HK', '1y');
 
-        expect(bars?.[0].close).toBe(386);
+        expect(result?.bars[0].close).toBe(386);
         expect(requestHistoryKL).toHaveBeenCalledTimes(1);
     });
 

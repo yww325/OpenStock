@@ -22,10 +22,10 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 
-    const bars = await getKlines(symbol, range);
-    if (!bars?.length) return NextResponse.json({ error: "No chart data" }, { status: 503 });
+    const result = await getKlines(symbol, range);
+    if (!result?.bars.length) return NextResponse.json({ error: "No chart data" }, { status: 503 });
 
-    return NextResponse.json({ symbol, range, bars }, {
+    return NextResponse.json({ symbol, range, bars: result.bars, cached: result.cached }, {
         headers: { "Cache-Control": "private, max-age=60" },
     });
 }

@@ -1,6 +1,8 @@
 // The bars a chart draws. Futu sends one entry per trading day; the fields are the ones the
 // chart needs, with the volume turned into a number (Futu sends it as a string).
 
+import { toNumber } from '@/lib/futu/numbers';
+
 export type ChartBar = {
     time: string;   // "2026-10-23", the trading day in Hong Kong time
     open: number;
@@ -11,7 +13,7 @@ export type ChartBar = {
     turnover: number;
 };
 
-// One bar as Futu sends it.
+// One bar as Futu sends it. The 64-bit fields (volume, timestamp) arrive as Long objects.
 export type FutuKl = {
     time?: string;
     isBlank?: boolean;
@@ -20,12 +22,12 @@ export type FutuKl = {
     lowPrice?: number;
     closePrice?: number;
     lastClosePrice?: number;
-    volume?: string | number;
+    volume?: number | string | { toNumber?: () => number };
     turnover?: number;
     turnoverRate?: number;
     pe?: number;
     changeRate?: number;
-    timestamp?: number;
+    timestamp?: number | string | { toNumber?: () => number };
 };
 
 // How far back each range reaches. The days are counted back from today, so a range always
@@ -43,22 +45,19 @@ export const KLINE_RANGE_LABELS: { id: KlineRange; label: string }[] = (
     Object.keys(KLINE_RANGES) as KlineRange[]
 ).map((id) => ({ id, label: KLINE_RANGES[id].label }));
 
-const toNumber = (value: number | string | undefined) => {
-    const parsed = typeof value === 'string' ? Number(value) : value;
-    return typeof parsed === 'number' && Number.isFinite(parsed) ? parsed : 0;
-};
+const toBarNumber = (value: number | string | { toNumber?: () => number } | undefined) => toNumber(value);
 
 export function klToBars(list: FutuKl[]): ChartBar[] {
     return list
         .filter((bar) => bar?.time && !bar.isBlank)
         .map((bar) => ({
             time: bar.time!.slice(0, 10),
-            open: toNumber(bar.openPrice),
-            high: toNumber(bar.highPrice),
-            low: toNumber(bar.lowPrice),
-            close: toNumber(bar.closePrice),
-            volume: toNumber(bar.volume),
-            turnover: toNumber(bar.turnover),
+            open: toBarNumber(bar.openPrice),
+            high: toBarNumber(bar.highPrice),
+            low: toBarNumber(bar.lowPrice),
+            close: toBarNumber(bar.closePrice),
+            volume: toBarNumber(bar.volume),
+            turnover: toBarNumber(bar.turnover),
         }))
         .filter((bar) => bar.close > 0);
 }
