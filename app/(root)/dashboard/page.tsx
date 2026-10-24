@@ -24,7 +24,8 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     const saved = (await cookies()).get(MARKET_COOKIE)?.value;
     const market = getMarket(requested ?? saved ?? marketForCountry((await getSession())?.user.country));
     const open = isMarketOpen(market);
-    const native = market.pulse.some((p) => p.finnhub);
+    const viaFutu = market.pulse.some((p) => p.futu);
+    const native = viaFutu || market.pulse.some((p) => p.finnhub);
     const heatmap = market.heatmap === 'stocks'
         ? { script: 'stock-heatmap.js', config: STOCK_HEATMAP_CONFIG, title: 'S&P 500 heatmap' }
         : market.heatmap === 'crypto'
@@ -46,9 +47,9 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                 <div className="section-head">
                     <div>
                         <h2 className="section-title">Pulse</h2>
-                        <p className="section-sub">{native ? 'Our shared quotes via Finnhub' : `${market.feed} quotes via TradingView`}</p>
+                        <p className="section-sub">{viaFutu ? 'Live quotes via Futu OpenD' : native ? 'Our shared quotes via Finnhub' : `${market.feed} quotes via TradingView`}</p>
                     </div>
-                    {native && <DataFreshness />}
+                    {native && <DataFreshness live={viaFutu} />}
                 </div>
                 {/* Keyed so switching markets swaps the tiles instead of reusing old widgets */}
                 <Suspense key={market.id} fallback={<PulseSkeleton />}>

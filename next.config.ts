@@ -10,6 +10,9 @@ const basePath = configuredBasePath && configuredBasePath !== '/'
 const nextConfig: NextConfig = {
     basePath,
     devIndicators: false,
+    // The Futu SDK is plain JavaScript with no type definitions: let Node load it as it is
+    // instead of bundling it.
+    serverExternalPackages: ['futu-api'],
     // /whats-new was live briefly before the changelog replaced it
     async redirects() {
         return [{ source: '/whats-new', destination: '/changelog', permanent: true }];

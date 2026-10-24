@@ -5,6 +5,7 @@ import { LineChart } from "lucide-react";
 import ChangePill from "@/components/ChangePill";
 import PriceFlash from "@/components/PriceFlash";
 import { useLiveQuotes, type LiveQuote } from "@/hooks/useLiveQuotes";
+import { isHkSymbol } from "@/lib/futu/symbols";
 
 const formatAmount = (value: number) =>
     value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: value < 1 ? 4 : 2 });
@@ -14,7 +15,7 @@ const formatAmount = (value: number) =>
 export default function PulseTile({ symbol, label, initial }: { symbol: string; label: string; initial: LiveQuote | null }) {
     const live = useLiveQuotes([symbol]);
     const quote = live[symbol] ?? initial;
-    const isCrypto = symbol.startsWith('BINANCE:');
+    const currency = isHkSymbol(symbol) ? 'HK$' : symbol.startsWith('BINANCE:') ? 'USDT' : '$';
 
     return (
         <Link href={`/stocks/${encodeURIComponent(symbol)}`} className="bento-tile transition-colors hover:bg-hover/60">
@@ -25,7 +26,7 @@ export default function PulseTile({ symbol, label, initial }: { symbol: string; 
             </div>
             <PriceFlash value={quote?.c} className="bento-value self-start">
                 {quote?.c ? (
-                    isCrypto ? <>{formatAmount(quote.c)}<small> USDT</small></> : <><small>$</small>{formatAmount(quote.c)}</>
+                    <><small>{currency}</small>{formatAmount(quote.c)}</>
                 ) : '—'}
             </PriceFlash>
             <div className="bento-foot">

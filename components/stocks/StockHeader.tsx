@@ -3,7 +3,11 @@ import WatchlistButton from "@/components/WatchlistButton";
 import CreateAlertModal from "@/components/watchlist/CreateAlertModal";
 import StockLivePrice from "@/components/stocks/StockLivePrice";
 import { isStockInWatchlist } from "@/lib/actions/watchlist.actions";
-import { getCompanyProfile, getLiveQuotes } from "@/lib/actions/finnhub.actions";
+import { getCompanyProfile } from "@/lib/actions/finnhub.actions";
+import { getLiveQuotes } from "@/lib/quotes";
+import { getFutuSecurityInfo } from "@/lib/futu/quotes";
+import { HK_CURRENCY, isHkSymbol } from "@/lib/futu/symbols";
+import { HK_UNIVERSE_BY_SYMBOL } from "@/lib/futu/hk-universe";
 import { formatNumber, formatPrice, formatSymbolForTradingView } from "@/lib/utils";
 import { hasFinnhubQuotes } from "@/lib/markets";
 import { symbolInfoConfig } from "@/lib/constants";
@@ -35,39 +39,64 @@ async function TradingViewHeader({ symbol }: { symbol: string }) {
 }
 
 export default async function StockHeader({ symbol }: { symbol: string }) {
-    if (!hasFinnhubQuotes(symbol)) return <TradingViewHeader symbol={symbol} />;
+    // Hong Kong listings are priced through our own Futu OpenD link, everything else Finnhub covers
+    // or TradingView shows.
+    const hongKong = isHkSymbol(symbol);
+    if (!hongKong && !hasFinnhubQuotes(symbol)) return <TradingViewHeader symbol={symbol} />;
 
-    const [isInWatchlist, quotes, profile] = await Promise.all([
+    const [isInWatchlist, quotes] = await Promise.all([
         isStockInWatchlist(symbol),
         getLiveQuotes([symbol]),
-        getCompanyProfile(symbol),
     ]);
     const quote = quotes[symbol];
 
-    const currency = profile?.currency || 'USD';
-    const company = profile?.name || symbol;
+    let company = symbol;
+    let currency = 'USD';
+    let marketCap: number | undefined;
+    let logo: string | undefined;
+    let exchange: string | undefined;
+    let sector: string | undefined;
+
+    if (hongKong) {
+        const info = await getFutuSecurityInfo([symbol]);
+        const security = info[symbol];
+        company = security?.name || HK_UNIVERSE_BY_SYMBOL.get(symbol)?.name || symbol;
+        currency = HK_CURRENCY;
+        marketCap = security?.marketCap;
+        exchange = 'HKEX';
+        sector = HK_UNIVERSE_BY_SYMBOL.get(symbol)?.sector;
+    } else {
+        const profile = await getCompanyProfile(symbol);
+        company = profile?.name || symbol;
+        currency = profile?.currency || 'USD';
+        marketCap = profile?.marketCapitalization;
+        logo = profile?.logo;
+        exchange = profile?.exchange;
+        sector = profile?.finnhubIndustry;
+    }
+
     const money = (value?: number) => (value ? formatPrice(value, currency) : '—');
 
     const stats = [
         { label: 'Open', icon: CalendarClock, value: money(quote?.o), hint: 'First trade of the session' },
         { label: 'Day range', icon: MoveVertical, value: quote?.l && quote?.h ? `${money(quote.l)} – ${money(quote.h)}` : '—', hint: 'Low to high' },
         { label: 'Prev close', icon: Gauge, value: money(quote?.pc), hint: 'Last session' },
-        { label: 'Market cap', icon: Landmark, value: profile?.marketCapitalization ? formatNumber(profile.marketCapitalization) : '—', hint: currency },
+        { label: 'Market cap', icon: Landmark, value: marketCap ? formatNumber(marketCap) : '—', hint: currency },
     ];
 
     return (
         <section className="hatch">
             <div className="card flex flex-wrap items-center gap-x-6 gap-y-4 p-4">
                 <div className="flex min-w-0 flex-1 basis-64 items-center gap-3">
-                    {profile?.logo ? (
-                        <span className="logo-well size-11"><img src={profile.logo} alt="" className="size-full object-contain p-1.5" /></span>
+                    {logo ? (
+                        <span className="logo-well size-11"><img src={logo} alt="" className="size-full object-contain p-1.5" /></span>
                     ) : (
                         <span className="logo-well is-empty size-11">{symbol[0]}</span>
                     )}
                     <div className="min-w-0">
                         <h1 className="truncate text-xl font-bold tracking-[-0.03em]">{company}</h1>
                         <p className="mono truncate text-[12.5px] text-faint">
-                            {[symbol, profile?.exchange, profile?.finnhubIndustry].filter(Boolean).join(' · ')}
+                            {[symbol, exchange, sector].filter(Boolean).join(' · ')}
                         </p>
                     </div>
                 </div>
@@ -76,9 +105,15 @@ export default async function StockHeader({ symbol }: { symbol: string }) {
 
                 <div className="flex items-center gap-2">
                     <WatchlistButton symbol={symbol} company={company} isInWatchlist={isInWatchlist} />
-                    <CreateAlertModal symbol={symbol} currentPrice={quote?.c} currency={currency}>
-                        <button type="button" className="btn btn-primary"><Bell /> Set alert</button>
-                    </CreateAlertModal>
+                    {hasFinnhubQuotes(symbol) ? (
+                        <CreateAlertModal symbol={symbol} currentPrice={quote?.c} currency={currency}>
+                            <button type="button" className="btn btn-primary"><Bell /> Set alert</button>
+                        </CreateAlertModal>
+                    ) : (
+                        <span className="pill h-9 px-3" title="Price alerts need a quote source we can check every 5 minutes">
+                            <Bell /> Alerts: US stocks and crypto
+                        </span>
+                    )}
                 </div>
             </div>
 

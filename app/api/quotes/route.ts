@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/better-auth/auth";
-import { getLiveQuotes } from "@/lib/actions/finnhub.actions";
+import { getLiveQuotes } from "@/lib/quotes";
 import { isRateLimited } from "@/lib/rate-limit";
 
 const MAX_SYMBOLS = 25;

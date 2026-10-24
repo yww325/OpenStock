@@ -102,7 +102,7 @@
 
 ## ⏱️ How fresh is the data <a name="data-freshness"></a>
 
-Charts always stream live from TradingView. Quotes, watchlist prices and alerts come from Finnhub:
+Charts always stream live from TradingView. Quotes, watchlist prices and alerts come from Finnhub; Hong Kong prices come from your own Futu OpenD gateway:
 
 | | Quotes | Price alerts | Cost |
 |---|---|---|---|
@@ -116,7 +116,7 @@ Charts always stream live from TradingView. Quotes, watchlist prices and alerts 
 |---|---|
 | App | Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS v4, shadcn/ui and Radix |
 | Accounts and data | Better Auth, MongoDB with Mongoose |
-| Market data | Finnhub, TradingView widgets, Adanos (sentiment) |
+| Market data | Finnhub, Futu OpenD (Hong Kong), TradingView widgets, Adanos (sentiment) |
 | Background jobs | Inngest |
 | Email | Nodemailer (Gmail), Kit for the newsletter |
 | AI | Gemini, MiniMax or Siray |
@@ -151,6 +151,7 @@ Every variable is listed with comments in [`.env.example`](.env.example). The on
 | `BETTER_AUTH_URL` | Yes | The app's public URL, used for auth callbacks and links in emails |
 | `NEXT_PUBLIC_BASE_PATH` | No | Serves the app below a prefix, e.g. `https://example.com/OpenStock`. `BETTER_AUTH_URL` has to carry the same prefix. Set it before building *and* before running: Next.js bakes the path into the build |
 | `FINNHUB_API_KEY` | Yes | Market data. Or put several free keys, comma-separated, in `FINNHUB_API_KEYS`: they're rotated, and each adds 60 requests a minute |
+| `FUTU_OPEND_HOST`, `FUTU_OPEND_PORT` | No | Hong Kong market data. Defaults to `127.0.0.1:11111`, where [Futu OpenD](https://www.futunn.com/en/openD) serves the quotes. Without it the app runs, but Hong Kong listings have no price |
 | `NEXT_PUBLIC_OPENSTOCK_DATA_MODE` | No | `cached` (hourly, the default) or `realtime` (every 15 seconds, with price alerts). Fixed when the app is built: rebuild after changing it |
 | `INNGEST_SIGNING_KEY`, `INNGEST_EVENT_KEY` | In production | Background jobs: welcome emails, price alerts and the weekly digest |
 | `NODEMAILER_EMAIL`, `NODEMAILER_PASSWORD` | No | Sending email through Gmail, with an app password. Without them, emails are skipped |

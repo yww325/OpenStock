@@ -1,15 +1,19 @@
 // Markets OpenStock can show for free. Coverage was tested against the free data sources:
 //   - Finnhub free: US stocks and crypto only (every other exchange returns 403).
+//   - Futu OpenD: Hong Kong listings, on the machine's own gateway (see lib/futu).
 //   - TradingView embeds: US, crypto, forex live; TSX + ASX delayed; BSE + XETRA end-of-day.
 //     NSE and TVC indices (NIFTY, FTSE, DAX, N225, HSI) are blocked in embeds; LSE, Tokyo, Hong Kong and
 //     others block only the candle chart (see CHART_BLOCKED_EXCHANGES in lib/utils.ts).
 // Adding a market = adding an entry here with symbols from an exchange that renders in embeds.
 
 import { isInternationalSymbol } from "@/lib/utils";
+import { HK_MARKET_GROUPS } from "@/lib/futu/hk-universe";
+import { isHkSymbol } from "@/lib/futu/symbols";
 
-export type MarketId = 'us' | 'in' | 'de' | 'ca' | 'au' | 'crypto' | 'fx';
+export type MarketId = 'us' | 'in' | 'de' | 'ca' | 'au' | 'hk' | 'crypto' | 'fx';
 
-type Hours = { open: number; close: number }; // minutes of the local day
+// Minutes of the local day. `breakStart`/`breakEnd` model a midday break, as Hong Kong has.
+type Hours = { open: number; close: number; breakStart?: number; breakEnd?: number };
 
 export type Market = {
     id: MarketId;
@@ -18,8 +22,9 @@ export type Market = {
     timeZone: string;
     hours: Hours | '24/7' | '24/5';
     feed: 'Live' | 'Delayed' | 'End of day';
-    // Tiles on the dashboard. `finnhub` set = native tile with our own cached quote; otherwise a TradingView quote.
-    pulse: { symbol: string; label: string; finnhub?: string }[];
+    // Tiles on the dashboard. `finnhub` or `futu` set = native tile with our own cached quote;
+    // otherwise a TradingView quote.
+    pulse: { symbol: string; label: string; finnhub?: string; futu?: string }[];
     groups: { title: string; symbols: [symbol: string, name: string][] }[];
     heatmap?: 'stocks' | 'crypto';
     news: 'stock' | 'crypto' | 'forex';
@@ -104,6 +109,17 @@ export const MARKETS: Market[] = [
         news: 'stock',
     },
     {
+        id: 'hk', name: 'Hong Kong', short: 'HK', timeZone: 'Asia/Hong_Kong', hours: { open: hm(9, 30), close: hm(16), breakStart: hm(12), breakEnd: hm(13) }, feed: 'Live',
+        pulse: [
+            { symbol: 'HKEX:700', label: 'Tencent', futu: '0700.HK' },
+            { symbol: 'HKEX:9988', label: 'Alibaba', futu: '9988.HK' },
+            { symbol: 'HKEX:3690', label: 'Meituan', futu: '3690.HK' },
+            { symbol: 'HKEX:1810', label: 'Xiaomi', futu: '1810.HK' },
+        ],
+        groups: HK_MARKET_GROUPS,
+        news: 'stock',
+    },
+    {
         id: 'crypto', name: 'Crypto', short: 'Crypto', timeZone: 'UTC', hours: '24/7', feed: 'Live',
         pulse: [
             { symbol: 'BINANCE:BTCUSDT', label: 'Bitcoin', finnhub: 'BINANCE:BTCUSDT' },
@@ -138,7 +154,7 @@ export const MARKET_COOKIE = 'openstock-market';
 
 export const getMarket = (id?: string | null) => MARKETS.find((m) => m.id === id) ?? MARKETS[0];
 
-const COUNTRY_MARKET: Record<string, MarketId> = { IN: 'in', DE: 'de', CA: 'ca', AU: 'au' };
+const COUNTRY_MARKET: Record<string, MarketId> = { IN: 'in', DE: 'de', CA: 'ca', AU: 'au', HK: 'hk' };
 export const marketForCountry = (country?: string | null): MarketId => COUNTRY_MARKET[country ?? ''] ?? DEFAULT_MARKET;
 
 // Finnhub free can price (and so alert on) US listings and Binance pairs only.
@@ -146,6 +162,16 @@ export const hasFinnhubQuotes = (symbol: string) => {
     const upper = symbol.toUpperCase();
     if (upper.startsWith('BINANCE:')) return true;
     return !upper.includes(':') && !isInternationalSymbol(upper);
+};
+
+// Hong Kong listings are priced through the machine's own Futu OpenD gateway.
+export const hasFutuQuotes = (symbol: string) => isHkSymbol(symbol);
+
+// Which provider answers for a symbol.
+export const quoteSource = (symbol: string): 'futu' | 'finnhub' | 'tradingview' => {
+    if (hasFutuQuotes(symbol)) return 'futu';
+    if (hasFinnhubQuotes(symbol)) return 'finnhub';
+    return 'tradingview';
 };
 
 // Is the market trading right now, in its own time zone? Holidays aren't modelled.
@@ -164,5 +190,11 @@ export function isMarketOpen(market: Market, date = new Date()) {
         if (day === 5) return minutes < hm(17);
         return true;
     }
-    return day >= 1 && day <= 5 && minutes >= market.hours.open && minutes < market.hours.close;
+    if (day < 1 || day > 5) return false;
+    if (minutes < market.hours.open || minutes >= market.hours.close) return false;
+    // Hong Kong trades two sessions with a lunch break in between
+    if (market.hours.breakStart !== undefined && market.hours.breakEnd !== undefined) {
+        return minutes < market.hours.breakStart || minutes >= market.hours.breakEnd;
+    }
+    return true;
 }

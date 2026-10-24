@@ -1,28 +1,29 @@
 import PulseTile from "@/components/PulseTile";
 import TradingViewWidget from "@/components/TradingViewWidget";
-import { getLiveQuotes } from "@/lib/actions/finnhub.actions";
+import { getLiveQuotes } from "@/lib/quotes";
 import { singleQuoteConfig } from "@/lib/constants";
 import { getMarket, type Market } from "@/lib/markets";
 
 const SINGLE_QUOTE = 'https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js';
 
-// Four headline tiles for a market. Markets Finnhub can price get native tiles from our shared quote cache;
-// the rest use TradingView's quote tile, which is free for those exchanges.
+// Four headline tiles for a market. Markets Finnhub can price get native tiles from our shared quote cache,
+// Hong Kong from our own Futu OpenD link; the rest use TradingView's quote tile.
 export default async function IndexPulse({ market = getMarket('us') }: { market?: Market }) {
-    const native = market.pulse.flatMap((p) => (p.finnhub ? [p.finnhub] : []));
+    const native = market.pulse.flatMap((p) => (p.finnhub ? [p.finnhub] : p.futu ? [p.futu] : []));
     const quotes = native.length ? await getLiveQuotes(native) : {};
 
     return (
         <div className="bento">
             {market.pulse.map((tile) => {
-                if (!tile.finnhub) {
+                const priced = tile.finnhub ?? tile.futu;
+                if (!priced) {
                     return (
                         <div key={tile.symbol} className="bento-tile p-1.5">
                             <TradingViewWidget scriptUrl={SINGLE_QUOTE} config={singleQuoteConfig(tile.symbol)} height={112} />
                         </div>
                     );
                 }
-                return <PulseTile key={tile.symbol} symbol={tile.finnhub} label={tile.label} initial={quotes[tile.finnhub]} />;
+                return <PulseTile key={tile.symbol} symbol={priced} label={tile.label} initial={quotes[priced]} />;
             })}
         </div>
     );

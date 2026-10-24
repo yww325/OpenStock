@@ -3,7 +3,7 @@
 import { getDateRange, validateArticle, formatArticle } from '@/lib/utils';
 import { POPULAR_STOCKS } from '@/lib/constants';
 import { cache } from 'react';
-import { QUOTE_TTL_SECONDS } from '@/lib/market-data';
+import { searchHongKong } from '@/lib/futu/hk-universe';
 import { hasFinnhubQuotes } from '@/lib/markets';
 import { getSession } from '@/lib/better-auth/auth';
 
@@ -24,7 +24,6 @@ const MAX_IN_FLIGHT_PER_KEY = 2;
 const MAX_CACHE_ENTRIES = 1000;
 const FAILURE_TTL_MS = 60_000;
 // Quotes are shared across everyone looking at a symbol: Finnhub cost scales with symbols, not users
-const LIVE_QUOTE_TTL = QUOTE_TTL_SECONDS;
 // Long-lived responses also go to the Next data cache, which Vercel shares across all instances
 const SHARED_CACHE_MIN_TTL = 60;
 
@@ -182,13 +181,6 @@ export async function getQuote(symbol: string, revalidateSeconds = 0) {
     }
 }
 
-// Shared, short-lived quotes for anything shown live on screen (pages and /api/quotes)
-export async function getLiveQuotes(symbols: string[]) {
-    // Symbols the free plan can't price are skipped instead of spending a request on a 403
-    const quotes = await Promise.all(symbols.map((s) => (hasFinnhubQuotes(s) ? getQuote(s, LIVE_QUOTE_TTL) : null)));
-    return Object.fromEntries(symbols.map((s, i) => [s, quotes[i]?.c ? quotes[i] : null]));
-}
-
 export async function getCompanyProfile(symbol: string) {
     // Profiles exist for stocks Finnhub free covers; crypto pairs and non-US listings have none
     if (symbol.includes(':') || !hasFinnhubQuotes(symbol)) return null;
@@ -220,33 +212,6 @@ export async function getStockMetrics(symbol: string): Promise<number | null> {
         return null;
     }
 }
-
-export async function getWatchlistData(symbols: string[]) {
-    if (!symbols || symbols.length === 0) return [];
-
-    // Fetch quotes and profiles in parallel
-    const promises = symbols.map(async (sym) => {
-        const covered = hasFinnhubQuotes(sym);
-        const [quote, profile] = covered
-            ? await Promise.all([getQuote(sym, LIVE_QUOTE_TTL), getCompanyProfile(sym)])
-            : [null, null];
-
-        return {
-            symbol: sym,
-            price: quote?.c || 0,
-            change: quote?.d || 0,
-            changePercent: quote?.dp || 0,
-            currency: profile?.currency || 'USD',
-            name: profile?.name || sym,
-            logo: profile?.logo,
-            marketCap: profile?.marketCapitalization,
-            peRatio: 0 // Finnhub 'quote' and 'profile2' don't easily give real-time PE. Might need 'metric' endpoint, but skipping for now to save rate limits.
-        };
-    });
-
-    return await Promise.all(promises);
-}
-
 
 export async function getNews(symbols?: string[]): Promise<MarketNewsArticle[]> {
     try {
@@ -325,13 +290,16 @@ export async function getNews(symbols?: string[]): Promise<MarketNewsArticle[]> 
 
 export const searchStocks = cache(async (query?: string): Promise<StockWithWatchlistStatus[]> => {
     try {
-        if (FINNHUB_KEYS.length === 0) {
-            // If no token, log and return empty to avoid throwing per requirements
-            console.error('Error in stock search:', new Error('FINNHUB API key is not configured'));
-            return [];
-        }
-
         const trimmed = typeof query === 'string' ? query.trim() : '';
+        // Hong Kong listings come from the app's own list: no key, no quota, and they work
+        // even when this instance has no Finnhub key at all.
+        const hongKong = searchHongKong(trimmed).map(({ symbol, name }) => ({
+            symbol,
+            description: name,
+            displaySymbol: symbol,
+            type: 'Stock',
+            __exchange: 'HKEX',
+        }));
 
         let results: SearchStockCandidate[] = [];
 
@@ -344,6 +312,8 @@ export const searchStocks = cache(async (query?: string): Promise<StockWithWatch
                 type: 'Common Stock',
                 __exchange: exchange,
             }));
+        } else if (FINNHUB_KEYS.length === 0) {
+            console.error('Error in stock search:', new Error('FINNHUB API key is not configured'));
         } else {
             // A public server action: only signed-in users may spend Finnhub quota on searches
             if (!(await getSession())?.user) return [];
@@ -352,7 +322,8 @@ export const searchStocks = cache(async (query?: string): Promise<StockWithWatch
             results = Array.isArray(data?.result) ? data.result : [];
         }
 
-        const mapped: StockWithWatchlistStatus[] = results
+        const seen = new Set<string>();
+        const mapped = [...hongKong, ...results]
             .map((r) => {
                 const upper = (r.symbol || '').toUpperCase();
                 const name = r.description || upper;
@@ -367,6 +338,11 @@ export const searchStocks = cache(async (query?: string): Promise<StockWithWatch
                     isInWatchlist: false,
                 };
                 return item;
+            })
+            .filter((item) => {
+                if (!item.symbol || seen.has(item.symbol)) return false;
+                seen.add(item.symbol);
+                return true;
             })
             .slice(0, 15);
 
