@@ -1,5 +1,9 @@
 // The Futu SDK talks to OpenD, the little gateway Futu runs on your own machine. OpenD holds
-// the market-data login and serves the protocol on 127.0.0.1:11111.
+// the market-data login and serves the protocol.
+//
+// The Node SDK speaks WebSocket, so it needs OpenD's WebSocket port, which is off by default:
+// start OpenD with `-websocket_ip=127.0.0.1 -websocket_port=33333`. (The Python SDK talks the
+// raw protocol on 11111 instead; that port is no use here.)
 //
 // This module owns that connection: one socket per server process, opened on first use and
 // kept for later calls. When OpenD is not running there is nothing to do about it, so the
@@ -9,7 +13,7 @@
 import ftWebsocket from 'futu-api';
 
 const HOST = process.env.FUTU_OPEND_HOST || '127.0.0.1';
-const PORT = Number(process.env.FUTU_OPEND_PORT || 11111);
+const PORT = Number(process.env.FUTU_OPEND_PORT || 33333);
 const SSL = process.env.FUTU_OPEND_SSL === 'true';
 const KEY = process.env.FUTU_OPEND_KEY || '';
 

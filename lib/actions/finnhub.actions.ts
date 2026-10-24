@@ -293,7 +293,7 @@ export const searchStocks = cache(async (query?: string): Promise<StockWithWatch
         const trimmed = typeof query === 'string' ? query.trim() : '';
         // Hong Kong listings come from the app's own list: no key, no quota, and they work
         // even when this instance has no Finnhub key at all.
-        const hongKong = searchHongKong(trimmed).map(({ symbol, name }) => ({
+        const hongKong: SearchStockCandidate[] = searchHongKong(trimmed).map(({ symbol, name }) => ({
             symbol,
             description: name,
             displaySymbol: symbol,
@@ -305,13 +305,15 @@ export const searchStocks = cache(async (query?: string): Promise<StockWithWatch
 
         if (!trimmed) {
             // Shown in the palette on every page, so no API calls: Finnhub's free tier is 60 req/min
-            results = POPULAR_STOCKS.map(({ symbol, name, exchange }) => ({
+            const popular: SearchStockCandidate[] = POPULAR_STOCKS.map(({ symbol, name, exchange }) => ({
                 symbol,
                 description: name,
                 displaySymbol: symbol,
                 type: 'Common Stock',
                 __exchange: exchange,
             }));
+            // Interleaved, so the palette shows both markets
+            results = popular.flatMap((stock, i) => (hongKong[i] ? [stock, hongKong[i]] : [stock]));
         } else if (FINNHUB_KEYS.length === 0) {
             console.error('Error in stock search:', new Error('FINNHUB API key is not configured'));
         } else {
@@ -323,7 +325,7 @@ export const searchStocks = cache(async (query?: string): Promise<StockWithWatch
         }
 
         const seen = new Set<string>();
-        const mapped = [...hongKong, ...results]
+        const mapped = (trimmed ? [...hongKong, ...results] : results)
             .map((r) => {
                 const upper = (r.symbol || '').toUpperCase();
                 const name = r.description || upper;

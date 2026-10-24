@@ -4,6 +4,7 @@ import ChangePill from "@/components/ChangePill";
 import DataFreshness from "@/components/DataFreshness";
 import PriceFlash from "@/components/PriceFlash";
 import { useLiveQuotes, type LiveQuote } from "@/hooks/useLiveQuotes";
+import { isHkSymbol } from "@/lib/futu/symbols";
 import { formatPrice } from "@/lib/utils";
 
 const StockLivePrice = ({ symbol, initial, currency }: { symbol: string; initial: LiveQuote | null; currency: string }) => {
@@ -22,7 +23,7 @@ const StockLivePrice = ({ symbol, initial, currency }: { symbol: string; initial
                         {quote?.d != null ? `${quote.d > 0 ? '+' : ''}${quote.d.toFixed(2)}` : ''}
                     </span>
                 </span>
-                <DataFreshness tradeTime={quote?.t} />
+                <DataFreshness tradeTime={quote?.t} live={isHkSymbol(symbol)} />
             </div>
         </div>
     );

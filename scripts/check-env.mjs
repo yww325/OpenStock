@@ -67,9 +67,9 @@ const optionalVars = {
     // Market data freshness (fixed at build time: rebuild after changing it)
     'NEXT_PUBLIC_OPENSTOCK_DATA_MODE': '"cached" (default: quotes refresh hourly, shared by everyone) or "realtime" (every 15s, with price alerts)',
 
-    // Hong Kong market data through Futu OpenD (defaults to 127.0.0.1:11111)
+    // Hong Kong market data through Futu OpenD (defaults to 127.0.0.1:33333, the WebSocket port)
     'FUTU_OPEND_HOST': 'Host Futu OpenD listens on (default: 127.0.0.1)',
-    'FUTU_OPEND_PORT': 'Port Futu OpenD listens on (default: 11111)',
+    'FUTU_OPEND_PORT': 'Port Futu OpenD listens on (default: 33333)',
     'FUTU_OPEND_SSL': 'Use wss:// to reach Futu OpenD (default: false)',
     'FUTU_OPEND_KEY': 'Key Futu OpenD was started with (only if it uses one)',
 

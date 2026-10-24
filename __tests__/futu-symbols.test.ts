@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { fromFutuCode, isHkSymbol, toFutuCode } from '@/lib/futu/symbols';
+import { fromFutuCode, fromTradingViewSymbol, isHkSymbol, toFutuCode } from '@/lib/futu/symbols';
 import { snapshotToQuote, snapshotToSecurityInfo } from '@/lib/futu/quote';
 import { searchHongKong } from '@/lib/futu/hk-universe';
 import { getMarket, isMarketOpen, quoteSource } from '@/lib/markets';
@@ -60,6 +60,14 @@ describe('Hong Kong symbols', () => {
         // The round trip has to keep the same ticker
         expect(fromFutuCode(toFutuCode('0700.HK')!)).toBe('0700.HK');
         expect(fromFutuCode(toFutuCode('0005.HK')!)).toBe('0005.HK');
+    });
+
+    it('reads TradingView spelling back into the app spelling', () => {
+        expect(fromTradingViewSymbol('HKEX:700')).toBe('0700.HK');
+        expect(fromTradingViewSymbol('HKEX:5')).toBe('0005.HK');
+        expect(fromTradingViewSymbol('HKEX:9988')).toBe('9988.HK');
+        // Anything that is not a Hong Kong listing is left alone
+        expect(fromTradingViewSymbol('NASDAQ:AAPL')).toBe('NASDAQ:AAPL');
     });
 });
 

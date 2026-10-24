@@ -29,6 +29,12 @@ export function fromFutuCode(code: string): string {
     return `${digits.startsWith('0') ? digits.slice(1) : digits}.HK`;
 }
 
+// TradingView's spelling ("HKEX:700") turned back into the app's own ("0700.HK").
+export function fromTradingViewSymbol(tvSymbol: string): string {
+    const code = toFutuCode(tvSymbol);
+    return code ? fromFutuCode(code) : tvSymbol;
+}
+
 // The currency a Hong Kong listing trades in. Futu reports prices in HKD, unlike the
 // Finnhub symbols, which are always in USD.
 export const HK_CURRENCY = 'HKD';

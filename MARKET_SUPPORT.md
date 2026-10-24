@@ -25,12 +25,14 @@ What OpenStock can show depends on three free data sources. This table was teste
 
 ## Hong Kong and Futu OpenD
 
-Hong Kong prices come from Futu OpenD, the gateway Futu runs on your own machine. OpenD holds the market-data login and serves the protocol on `127.0.0.1:11111`; the app talks to it with the `futu-api` Node SDK.
+Hong Kong prices come from Futu OpenD, the gateway Futu runs on your own machine. OpenD holds the market-data login; the app talks to it with the `futu-api` Node SDK.
 
 - Run OpenD before the app. On this deployment it is a systemd user unit, `futu-opend.service`.
-- Set `FUTU_OPEND_HOST` and `FUTU_OPEND_PORT` if it does not listen on `127.0.0.1:11111`.
+- The Node SDK speaks WebSocket, so OpenD has to serve it: start it with `-websocket_ip=127.0.0.1 -websocket_port=33333`. The raw protocol port 11111 is what the Python SDK uses and is of no use to the app.
+- Set `FUTU_OPEND_HOST` and `FUTU_OPEND_PORT` if it does not listen on `127.0.0.1:33333`.
 - Without OpenD the app still runs: Hong Kong listings are shown without a price.
 - OpenD serves one login at a time, so run exactly one instance per machine.
+- TradingView has no Hong Kong data in free embeds, so the Hong Kong market page lists its leaders in the app's own table instead of the TradingView widgets.
 
 ## Adding a market
 
