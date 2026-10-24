@@ -8,6 +8,7 @@
 import { getCompanyProfile, getQuote } from '@/lib/actions/finnhub.actions';
 import { getFutuQuotes, getFutuSecurityInfo } from '@/lib/futu/quotes';
 import { HK_CURRENCY, isHkSymbol } from '@/lib/futu/symbols';
+import { hasFinnhubQuotes } from '@/lib/markets';
 import { QUOTE_TTL_SECONDS } from '@/lib/market-data';
 
 export type LiveQuote = {
@@ -48,7 +49,8 @@ export async function getLiveQuotes(symbols: string[]): Promise<Record<string, L
 
 // Finnhub prices the US listings and crypto pairs the free plan covers.
 async function getFinnhubQuotes(symbols: string[]): Promise<Record<string, LiveQuote | null>> {
-    const quotes = await Promise.all(symbols.map((s) => getQuote(s, QUOTE_TTL_SECONDS)));
+    // Symbols the free plan can't price are skipped instead of spending a request on a 403
+    const quotes = await Promise.all(symbols.map((s) => (hasFinnhubQuotes(s) ? getQuote(s, QUOTE_TTL_SECONDS) : null)));
     return Object.fromEntries(symbols.map((s, i) => [s, quotes[i]?.c ? quotes[i] : null]));
 }
 
@@ -64,10 +66,10 @@ export async function getWatchlistData(symbols: string[]): Promise<WatchlistRow[
 }
 
 async function getFinnhubRow(symbol: string): Promise<WatchlistRow> {
-    const [quote, profile] = await Promise.all([
-        getQuote(symbol, QUOTE_TTL_SECONDS),
-        getCompanyProfile(symbol),
-    ]);
+    const covered = hasFinnhubQuotes(symbol);
+    const [quote, profile] = covered
+        ? await Promise.all([getQuote(symbol, QUOTE_TTL_SECONDS), getCompanyProfile(symbol)])
+        : [null, null];
 
     return {
         symbol,
