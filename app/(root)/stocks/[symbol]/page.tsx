@@ -4,6 +4,7 @@ import TradingViewWidget from "@/components/TradingViewWidget";
 import StockHeader, { StockHeaderSkeleton } from "@/components/stocks/StockHeader";
 import StockSentimentCard from "@/components/stocks/StockSentimentCard";
 import StockChart from "@/components/stocks/StockChart";
+import HongKongChart from "@/components/HongKongChart";
 import Panel from "@/components/Panel";
 import {
     TECHNICAL_ANALYSIS_WIDGET_CONFIG,
@@ -12,6 +13,7 @@ import {
 } from "@/lib/constants";
 import { getStockSentimentInsights } from '@/lib/actions/adanos.actions';
 import { getStockMetrics } from '@/lib/actions/finnhub.actions';
+import { isHkSymbol } from '@/lib/futu/symbols';
 import { formatSymbolForTradingView, isChartEmbeddable, tradingViewSymbolUrl } from '@/lib/utils';
 
 const scriptUrl = `https://s3.tradingview.com/external-embedding/embed-widget-`;
@@ -51,7 +53,13 @@ export default async function StockDetails({ params }: StockDetailsPageProps) {
 
             <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(320px,400px)]">
                 <div className="flex min-w-0 flex-col gap-3">
-                    {isChartEmbeddable(tvSymbol) ? (
+                    {isHkSymbol(symbol) ? (
+                        // TradingView does not license Hong Kong charts for other sites, so the
+                        // candles come from Futu OpenD instead.
+                        <Panel title="Chart" sub="Daily candles from Futu OpenD">
+                            <HongKongChart symbol={symbol} />
+                        </Panel>
+                    ) : isChartEmbeddable(tvSymbol) ? (
                         <StockChart tvSymbol={tvSymbol} scriptUrl={`${scriptUrl}advanced-chart.js`} />
                     ) : (
                         // TradingView refuses this exchange's chart in embeds; say so instead of showing its error

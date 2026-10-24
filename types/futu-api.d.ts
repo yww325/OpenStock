@@ -12,6 +12,18 @@ declare module 'futu-api' {
         c2s: { securityList: { market: number; code: string }[] };
     };
 
+    export type FutuHistoryRequest = {
+        c2s: {
+            rehabType: number;
+            klType: number;
+            security: { market: number; code: string };
+            beginTime: string;
+            endTime: string;
+            maxAckKLNum?: number;
+            nextReqKey?: Uint8Array;
+        };
+    };
+
     export default class ftWebsocket {
         onlogin: ((ok: boolean, message?: unknown) => void) | null;
         onPush: ((cmd: number, response: unknown) => void) | null;
@@ -21,7 +33,8 @@ declare module 'futu-api' {
         GetSecuritySnapshot(req: FutuSecurityRequest): Promise<FutuResponse>;
         GetStaticInfo(req: FutuSecurityRequest): Promise<FutuResponse>;
         GetKL(req: unknown): Promise<FutuResponse>;
-        RequestHistoryKL(req: unknown): Promise<FutuResponse>;
+        RequestHistoryKL(req: FutuHistoryRequest): Promise<FutuResponse>;
+        RequestHistoryKLQuota(req: { c2s: { bGetDetail?: boolean } }): Promise<FutuResponse>;
         GetTradeDate(req: unknown): Promise<FutuResponse>;
         GetPlateSet(req: unknown): Promise<FutuResponse>;
     }
