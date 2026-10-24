@@ -3,7 +3,10 @@ import { getSession } from "@/lib/better-auth/auth";
 import { getLiveQuotes } from "@/lib/quotes";
 import { isRateLimited } from "@/lib/rate-limit";
 
-const MAX_SYMBOLS = 25;
+// The watchlist holds up to 50 symbols, and the Hong Kong market table asks for all of its
+// leaders at once. The rate limit below is charged per symbol, so a bigger batch does not buy
+// anybody more quotes.
+const MAX_SYMBOLS = 50;
 const SYMBOL_PATTERN = /^[A-Z0-9.:\-]{1,20}$/;
 
 // Polled by on-screen prices. Signed-in only and capped, so nobody can burn the shared Finnhub quota.
