@@ -14,9 +14,27 @@ import {
 import { withBasePath } from '@/lib/base-path';
 import { useLiveQuotes } from '@/hooks/useLiveQuotes';
 import { hongKongDay, KLINE_RANGE_LABELS, type ChartBar, type KlineRange } from '@/lib/futu/kline-map';
+import { formatRgba } from '@/lib/chart-color';
 import { cn } from '@/lib/utils';
 
-// The canvas cannot read CSS variables, so the theme colours are resolved once from the page.
+// The chart library only reads plain rgb colours, and the browser keeps the modern colour
+// spaces (oklch, lab) as they are, so a colour is painted on a one pixel canvas and read back
+// as red, green and blue.
+const toRgb = (color: string): string | null => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1;
+    canvas.height = 1;
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    if (!context) return null;
+
+    context.clearRect(0, 0, 1, 1);
+    context.fillStyle = color;
+    context.fillRect(0, 0, 1, 1);
+    const [r, g, b, a] = context.getImageData(0, 0, 1, 1).data;
+    return formatRgba(r, g, b, a);
+};
+
+// The theme colour of a CSS variable, in a form the chart can read.
 const cssColor = (name: string, fallback: string) => {
     if (typeof window === 'undefined') return fallback;
     const probe = document.createElement('span');
@@ -24,7 +42,7 @@ const cssColor = (name: string, fallback: string) => {
     document.body.appendChild(probe);
     const value = getComputedStyle(probe).color;
     probe.remove();
-    return value || fallback;
+    return toRgb(value) || fallback;
 };
 
 type Status = 'loading' | 'ready' | 'unavailable';
@@ -39,6 +57,7 @@ export default function HongKongChart({ symbol }: { symbol: string }) {
     const [range, setRange] = useState<KlineRange>('1y');
     const [bars, setBars] = useState<ChartBar[] | null>(null);
     const [status, setStatus] = useState<Status>('loading');
+    const [undrawable, setUndrawable] = useState(false);
     const live = useLiveQuotes([symbol]);
 
     // The chart itself: one canvas, created once.
@@ -48,21 +67,30 @@ export default function HongKongChart({ symbol }: { symbol: string }) {
 
         const up = cssColor('--up', '#2fce6e');
         const down = cssColor('--down', '#f2545b');
-        const chart = createChart(container, {
-            autoSize: true,
-            layout: {
-                background: { type: ColorType.Solid, color: 'transparent' },
-                textColor: cssColor('--muted-foreground', '#8b8b8b'),
-                attributionLogo: false,
-            },
-            grid: {
-                vertLines: { color: 'transparent' },
-                horzLines: { color: 'rgba(240, 243, 250, 0.04)' },
-            },
-            rightPriceScale: { borderColor: 'rgba(240, 243, 250, 0.08)', scaleMargins: { top: 0.12, bottom: 0.1 } },
-            timeScale: { borderColor: 'rgba(240, 243, 250, 0.08)', rightOffset: 3, barSpacing: 8, minBarSpacing: 0.5 },
-            crosshair: { mode: CrosshairMode.Normal },
-        });
+
+        let chart: IChartApi;
+        try {
+            chart = createChart(container, {
+                autoSize: true,
+                layout: {
+                    background: { type: ColorType.Solid, color: 'transparent' },
+                    textColor: cssColor('--muted-foreground', '#8b8b8b'),
+                    attributionLogo: false,
+                },
+                grid: {
+                    vertLines: { color: 'transparent' },
+                    horzLines: { color: 'rgba(240, 243, 250, 0.04)' },
+                },
+                rightPriceScale: { borderColor: 'rgba(240, 243, 250, 0.08)', scaleMargins: { top: 0.12, bottom: 0.1 } },
+                timeScale: { borderColor: 'rgba(240, 243, 250, 0.08)', rightOffset: 3, barSpacing: 8, minBarSpacing: 0.5 },
+                crosshair: { mode: CrosshairMode.Normal },
+            });
+        } catch (error) {
+            // A chart that cannot be drawn should not take the page down with it.
+            console.error('[chart] could not be drawn:', error);
+            setUndrawable(true);
+            return;
+        }
 
         const candles = chart.addSeries(CandlestickSeries, {
             upColor: up,
@@ -174,7 +202,7 @@ export default function HongKongChart({ symbol }: { symbol: string }) {
                 <span className="ml-auto text-[12px] text-faint">Daily candles · Futu OpenD</span>
             </div>
 
-            {status === 'unavailable' ? (
+            {undrawable || status === 'unavailable' ? (
                 <div className="empty-state py-14">
                     <h3>Chart not available for now</h3>
                     <p className="max-w-80 text-[13px]">
