@@ -68,7 +68,31 @@ const FINNHUB_EXCHANGE_SUFFIXES = new Set([
 
 // Thrown instead of calling Finnhub while an endpoint is in its failure cool-down; not worth logging again.
 class RecentFailure extends Error {}
+// A missing key is a configuration state, not a per-request failure. Without this the app threw
+// one Error per symbol per page render, and every render dumped a stack trace for each of them.
+class MissingApiKeyError extends Error {}
+
+let missingKeyLogged = false;
+// One line per process, and it says how to fix it. The per-symbol errors buried the real problem
+// under hundreds of stack traces.
+const logMissingApiKey = () => {
+    if (missingKeyLogged) return;
+    missingKeyLogged = true;
+    console.error('Finnhub API key is not configured (FINNHUB_API_KEYS). Quotes and news stay empty until one is set.');
+};
+
+// Whether a key is available at all. Callers that would fan out one request per symbol ask this
+// first, so a missing key costs one check instead of N failed requests.
+// Async because this file is a 'use server' module: every export here has to be a server action.
+export async function isFinnhubConfigured(): Promise<boolean> {
+    return FINNHUB_KEYS.length > 0;
+}
+
 const logFailure = (what: string, symbol: string, e: unknown) => {
+    if (e instanceof MissingApiKeyError) {
+        logMissingApiKey();
+        return;
+    }
     if (!(e instanceof RecentFailure)) console.error(`Error fetching ${what} for`, symbol, e);
 };
 
@@ -91,7 +115,7 @@ async function withSlot<T>(run: () => Promise<T>): Promise<T> {
 // The token travels in a header, so cache keys are the same whichever key served them.
 // On 429 the next key in the pool gets a turn.
 async function fetchWithKeyPool(url: string, ttl: number) {
-    if (FINNHUB_KEYS.length === 0) throw new Error('No Finnhub API key configured (FINNHUB_API_KEYS)');
+    if (FINNHUB_KEYS.length === 0) throw new MissingApiKeyError('No Finnhub API key configured (FINNHUB_API_KEYS)');
     let res: Response | null = null;
     for (let attempt = 0; attempt < FINNHUB_KEYS.length; attempt++) {
         const key = FINNHUB_KEYS[nextKeyIndex++ % FINNHUB_KEYS.length];
@@ -171,6 +195,11 @@ function getExchangeLabel(symbol: string, exchange?: string) {
 }
 
 export async function getQuote(symbol: string, revalidateSeconds = 0) {
+    // A missing key is a configuration state: answer with null instead of throwing per symbol.
+    if (!isFinnhubConfigured()) {
+        logMissingApiKey();
+        return null;
+    }
     try {
         const url = `${FINNHUB_BASE_URL}/quote?symbol=${encodeURIComponent(symbol)}`;
         // Real-time by default; shared views pass a short cache to stay inside Finnhub's 60 req/min
@@ -182,6 +211,10 @@ export async function getQuote(symbol: string, revalidateSeconds = 0) {
 }
 
 export async function getCompanyProfile(symbol: string) {
+    if (!isFinnhubConfigured()) {
+        logMissingApiKey();
+        return null;
+    }
     // Profiles exist for stocks Finnhub free covers; crypto pairs and non-US listings have none
     if (symbol.includes(':') || !hasFinnhubQuotes(symbol)) return null;
     try {
@@ -195,8 +228,8 @@ export async function getCompanyProfile(symbol: string) {
 }
 
 export async function getStockMetrics(symbol: string): Promise<number | null> {
-    if (FINNHUB_KEYS.length === 0) {
-        console.error('FINNHUB API key is not configured');
+    if (!isFinnhubConfigured()) {
+        logMissingApiKey();
         return null;
     }
 
@@ -217,7 +250,7 @@ export async function getNews(symbols?: string[]): Promise<MarketNewsArticle[]> 
     try {
         const range = getDateRange(5);
         if (FINNHUB_KEYS.length === 0) {
-            throw new Error('FINNHUB API key is not configured');
+            throw new MissingApiKeyError('FINNHUB API key is not configured');
         }
         const cleanSymbols = (symbols || [])
             .map((s) => s?.trim().toUpperCase())
@@ -283,7 +316,8 @@ export async function getNews(symbols?: string[]): Promise<MarketNewsArticle[]> 
         const formatted = unique.slice(0, maxArticles).map((a, idx) => formatArticle(a, false, undefined, idx));
         return formatted;
     } catch (err) {
-        console.error('getNews error:', err);
+        if (err instanceof MissingApiKeyError) logMissingApiKey();
+        else console.error('getNews error:', err);
         throw new Error('Failed to fetch news');
     }
 }
@@ -315,7 +349,7 @@ export const searchStocks = cache(async (query?: string): Promise<StockWithWatch
             // Interleaved, so the palette shows both markets
             results = popular.flatMap((stock, i) => (hongKong[i] ? [stock, hongKong[i]] : [stock]));
         } else if (FINNHUB_KEYS.length === 0) {
-            console.error('Error in stock search:', new Error('FINNHUB API key is not configured'));
+            logMissingApiKey();
         } else {
             // A public server action: only signed-in users may spend Finnhub quota on searches
             if (!(await getSession())?.user) return [];
