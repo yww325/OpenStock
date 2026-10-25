@@ -1,5 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+// The Hong Kong side talks to Futu OpenD, which is not running in every environment. The test
+// only cares that the Hong Kong half is still served, so the gateway is stubbed out.
+vi.mock('@/lib/futu/quotes', () => ({
+    getFutuQuotes: vi.fn(async (symbols: string[]) =>
+        Object.fromEntries(symbols.map((symbol) => [symbol, { c: 1, t: 1 }])),
+    ),
+    getFutuSecurityInfo: vi.fn(async (symbols: string[]) =>
+        Object.fromEntries(symbols.map((symbol) => [symbol, null])),
+    ),
+}));
+
 // The key pool is read when the module loads, so the environment has to be cleared before the
 // import, and the module registry has to be reset between the cases.
 async function loadWithoutFinnhubKey() {

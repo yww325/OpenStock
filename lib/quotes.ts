@@ -5,7 +5,8 @@
 // This is a server-side module on purpose: it talks to OpenD and reads API keys, so it must
 // not be reachable as a public server action.
 
-import { getCompanyProfile, getQuote, isFinnhubConfigured } from '@/lib/actions/finnhub.actions';
+import { getCompanyProfile, getQuote } from '@/lib/actions/finnhub.actions';
+import { isFinnhubConfigured } from '@/lib/finnhub/keys';
 import { getFutuQuotes, getFutuSecurityInfo } from '@/lib/futu/quotes';
 import { HK_CURRENCY, isHkSymbol } from '@/lib/futu/symbols';
 import { hasFinnhubQuotes } from '@/lib/markets';
@@ -51,7 +52,7 @@ export async function getLiveQuotes(symbols: string[]): Promise<Record<string, L
 async function getFinnhubQuotes(symbols: string[]): Promise<Record<string, LiveQuote | null>> {
     // Without a key every symbol would cost one failed request, one cache entry and one log line.
     // The market page asks for two dozen symbols at a time, so check once and answer with nulls.
-    if (!(await isFinnhubConfigured())) {
+    if (!isFinnhubConfigured()) {
         return Object.fromEntries(symbols.map((s) => [s, null]));
     }
     // Symbols the free plan can't price are skipped instead of spending a request on a 403

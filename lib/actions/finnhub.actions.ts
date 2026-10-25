@@ -6,16 +6,9 @@ import { cache } from 'react';
 import { searchHongKong } from '@/lib/futu/hk-universe';
 import { hasFinnhubQuotes } from '@/lib/markets';
 import { getSession } from '@/lib/better-auth/auth';
+import { finnhubKeys, isFinnhubConfigured } from '@/lib/finnhub/keys';
 
 const FINNHUB_BASE_URL = 'https://finnhub.io/api/v1';
-// Key pool: each free key has its own 60 req/min, so N keys = N x the quota. Rotated per request.
-// Read through an alias: `next build` freezes a literal process.env.NEXT_PUBLIC_* into the bundle, so Docker and
-// Railway images (built without secrets) would ignore a NEXT_PUBLIC_FINNHUB_API_KEY set at runtime.
-const env = process.env;
-const FINNHUB_KEYS = (env.FINNHUB_API_KEYS || env.NEXT_PUBLIC_FINNHUB_API_KEY || env.FINNHUB_API_KEY || '')
-    .split(',')
-    .map((k) => k.trim())
-    .filter(Boolean);
 let nextKeyIndex = 0;
 const FETCH_TIMEOUT_MS = 5000;
 // Finnhub stalls bursts of parallel requests from one key (measured: 4 at once -> most hang),
@@ -81,12 +74,9 @@ const logMissingApiKey = () => {
     console.error('Finnhub API key is not configured (FINNHUB_API_KEYS). Quotes and news stay empty until one is set.');
 };
 
-// Whether a key is available at all. Callers that would fan out one request per symbol ask this
-// first, so a missing key costs one check instead of N failed requests.
-// Async because this file is a 'use server' module: every export here has to be a server action.
-export async function isFinnhubConfigured(): Promise<boolean> {
-    return FINNHUB_KEYS.length > 0;
-}
+// Whether a key is available at all lives in lib/finnhub/keys.ts, as a plain function: this file is
+// a 'use server' module, so every export here has to be an async server action, and a promise is
+// always truthy -- `if (!isFinnhubConfigured())` would never fire.
 
 const logFailure = (what: string, symbol: string, e: unknown) => {
     if (e instanceof MissingApiKeyError) {
@@ -102,7 +92,7 @@ const inFlight = new Map<string, Promise<unknown>>();
 const responseCache = new Map<string, { value: unknown; freshUntil: number; failed?: boolean }>();
 
 async function withSlot<T>(run: () => Promise<T>): Promise<T> {
-    if (activeRequests >= MAX_IN_FLIGHT_PER_KEY * Math.max(1, FINNHUB_KEYS.length)) await new Promise<void>((resolve) => waitingForSlot.push(resolve));
+    if (activeRequests >= MAX_IN_FLIGHT_PER_KEY * Math.max(1, finnhubKeys.length)) await new Promise<void>((resolve) => waitingForSlot.push(resolve));
     activeRequests++;
     try {
         return await run();
@@ -115,10 +105,10 @@ async function withSlot<T>(run: () => Promise<T>): Promise<T> {
 // The token travels in a header, so cache keys are the same whichever key served them.
 // On 429 the next key in the pool gets a turn.
 async function fetchWithKeyPool(url: string, ttl: number) {
-    if (FINNHUB_KEYS.length === 0) throw new MissingApiKeyError('No Finnhub API key configured (FINNHUB_API_KEYS)');
+    if (finnhubKeys.length === 0) throw new MissingApiKeyError('No Finnhub API key configured (FINNHUB_API_KEYS)');
     let res: Response | null = null;
-    for (let attempt = 0; attempt < FINNHUB_KEYS.length; attempt++) {
-        const key = FINNHUB_KEYS[nextKeyIndex++ % FINNHUB_KEYS.length];
+    for (let attempt = 0; attempt < finnhubKeys.length; attempt++) {
+        const key = finnhubKeys[nextKeyIndex++ % finnhubKeys.length];
         res = await fetch(url, {
             headers: { 'X-Finnhub-Token': key },
             // Without a timeout a stalled Finnhub socket holds the page for Node's 300s default
@@ -249,7 +239,7 @@ export async function getStockMetrics(symbol: string): Promise<number | null> {
 export async function getNews(symbols?: string[]): Promise<MarketNewsArticle[]> {
     try {
         const range = getDateRange(5);
-        if (FINNHUB_KEYS.length === 0) {
+        if (finnhubKeys.length === 0) {
             throw new MissingApiKeyError('FINNHUB API key is not configured');
         }
         const cleanSymbols = (symbols || [])
@@ -348,7 +338,7 @@ export const searchStocks = cache(async (query?: string): Promise<StockWithWatch
             }));
             // Interleaved, so the palette shows both markets
             results = popular.flatMap((stock, i) => (hongKong[i] ? [stock, hongKong[i]] : [stock]));
-        } else if (FINNHUB_KEYS.length === 0) {
+        } else if (finnhubKeys.length === 0) {
             logMissingApiKey();
         } else {
             // A public server action: only signed-in users may spend Finnhub quota on searches
