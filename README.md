@@ -90,7 +90,7 @@
 
 **Watchlist and alerts**
 - A watchlist of up to 50 stocks, saved to your account.
-- Price alerts above or below a target, checked every 5 minutes and emailed to you (in realtime mode).
+- Price alerts above or below a target, checked every 5 minutes and emailed to you (in realtime mode, or with `NEXT_PUBLIC_OPENSTOCK_ALERTS=enabled`).
 - A weekly, AI-written news digest by email every Monday.
 
 **Accounts**
@@ -108,7 +108,7 @@ Charts always stream live from TradingView. Quotes, watchlist prices and alerts 
 |---|---|---|---|
 | **Community**: [openstock-ods.vercel.app](https://openstock-ods.vercel.app) | Every hour, shared by everyone | No | Free |
 | **OpenStock Cloud** (coming soon) | Every 15 seconds | By email | $5 a month |
-| **Self-hosted** | Every hour, or every 15 seconds with `NEXT_PUBLIC_OPENSTOCK_DATA_MODE=realtime` and your own Finnhub keys | By email, in realtime mode | Free |
+| **Self-hosted** | Every hour, or every 15 seconds with `NEXT_PUBLIC_OPENSTOCK_DATA_MODE=realtime` and your own Finnhub keys | By email: realtime mode, or `NEXT_PUBLIC_OPENSTOCK_ALERTS=enabled` on hourly quotes | Free |
 
 ## ⚙️ Tech stack <a name="tech-stack"></a>
 
@@ -136,7 +136,7 @@ npm run test:db              # checks the MongoDB connection
 npm run dev                  # http://localhost:3000
 ```
 
-Welcome emails, price alerts and the weekly digest run as [Inngest](https://www.inngest.com) jobs. Locally, start Inngest's dev server alongside the app: `npx inngest-cli@latest dev`.
+Welcome emails, price alerts and the weekly digest run as [Inngest](https://www.inngest.com) jobs. Locally, start Inngest's dev server alongside the app: `npx inngest-cli@latest dev`. A self-hosted instance without Inngest runs the price-alert check inside the Next.js process instead, every five minutes.
 
 For production: `npm run build && npm start`.
 
@@ -152,7 +152,8 @@ Every variable is listed with comments in [`.env.example`](.env.example). The on
 | `NEXT_PUBLIC_BASE_PATH` | No | Serves the app below a prefix, e.g. `https://example.com/OpenStock`. `BETTER_AUTH_URL` has to carry the same prefix. Set it before building *and* before running: Next.js bakes the path into the build |
 | `FINNHUB_API_KEY` | Yes | Market data. Or put several free keys, comma-separated, in `FINNHUB_API_KEYS`: they're rotated, and each adds 60 requests a minute |
 | `FUTU_OPEND_HOST`, `FUTU_OPEND_PORT` | No | Hong Kong market data. Defaults to `127.0.0.1:33333`, where [Futu OpenD](https://www.futunn.com/en/openD) serves the quotes over WebSocket. Without it the app runs, but Hong Kong listings have no price |
-| `NEXT_PUBLIC_OPENSTOCK_DATA_MODE` | No | `cached` (hourly, the default) or `realtime` (every 15 seconds, with price alerts). Fixed when the app is built: rebuild after changing it |
+| `NEXT_PUBLIC_OPENSTOCK_DATA_MODE` | No | `cached` (hourly, the default) or `realtime` (every 15 seconds). Fixed when the app is built: rebuild after changing it |
+| `NEXT_PUBLIC_OPENSTOCK_ALERTS` | No | `enabled` turns on email price alerts on an hourly instance. Realtime mode turns them on too. Fixed when the app is built |
 | `INNGEST_SIGNING_KEY`, `INNGEST_EVENT_KEY` | In production | Background jobs: welcome emails, price alerts and the weekly digest |
 | `NODEMAILER_EMAIL`, `NODEMAILER_PASSWORD` | No | Sending email through Gmail, with an app password. Without them, emails are skipped |
 | `GEMINI_API_KEY` (or MiniMax or Siray) | No | AI-written welcome emails and the news digest |
@@ -254,7 +255,7 @@ __tests__/        Vitest tests
   | Job | When |
   |---|---|
   | AI-personalised welcome email | On sign-up |
-  | Price alert check | Every 5 minutes, in realtime mode |
+  | Price alert check | Every 5 minutes, where alerts are on (Inngest, or this process without it) |
   | Weekly news digest (a Kit broadcast) | Mondays at 09:00 UTC |
 
 - **Email**: Nodemailer (Gmail) sends welcome, alert and password-reset emails; Kit sends the weekly digest.

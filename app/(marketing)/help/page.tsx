@@ -29,7 +29,7 @@ const FAQS = [
     },
     {
         question: 'My alert hasn’t fired.',
-        answer: 'Price alerts are part of OpenStock Cloud (or a self-hosted instance in realtime mode). There they are checked every five minutes and emailed to your account address when the price crosses your target. Check the alert’s status on the watchlist page.',
+        answer: 'Price alerts are part of OpenStock Cloud, or a self-hosted instance with NEXT_PUBLIC_OPENSTOCK_ALERTS=enabled (or realtime mode). There they are checked every five minutes and emailed to your account address when the price crosses your target. Check the alert’s status on the watchlist page.',
     },
     {
         question: 'Can I contribute code or designs?',

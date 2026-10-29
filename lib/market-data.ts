@@ -10,5 +10,7 @@ export const QUOTE_TTL_SECONDS = DATA_MODE === 'realtime' ? 15 : 3600;
 
 export const isRealtime = DATA_MODE === 'realtime';
 
-// Email price alerts are an OpenStock Cloud feature: on in realtime mode (Cloud or self-hosted), off on the free hourly site.
-export const alertsEnabled = isRealtime;
+// Email price alerts: on in realtime mode (Cloud or self-hosted), and on any instance that opts in
+// with NEXT_PUBLIC_OPENSTOCK_ALERTS=enabled. A five-minute alert check costs one quote per symbol,
+// so an hourly instance can send alerts without paying for realtime quotes. Fixed at build time.
+export const alertsEnabled = isRealtime || process.env.NEXT_PUBLIC_OPENSTOCK_ALERTS === 'enabled';

@@ -5,6 +5,7 @@ import { sendWeeklyNewsSummary, sendSignUpEmail, checkStockAlerts, checkInactive
 
 export const { GET, POST, PUT } = serve({
     client: inngest,
-    // Price alerts are an OpenStock Cloud feature, so the checker only runs where they are on
+    // Price alerts are checked by the Inngest cron where it is configured, and by the in-process
+    // scheduler (instrumentation.ts) where it is not; the function is registered either way.
     functions: [sendSignUpEmail, sendWeeklyNewsSummary, checkInactiveUsers, ...(alertsEnabled ? [checkStockAlerts] : [])],
 })
