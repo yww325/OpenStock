@@ -5,8 +5,8 @@ import {
     STOCK_ALERT_UPPER_EMAIL_TEMPLATE,
     STOCK_ALERT_LOWER_EMAIL_TEMPLATE,
 } from "@/lib/nodemailer/templates";
-import { escapeHtml, formatPrice, sanitizeEmailIntro } from "@/lib/utils";
-import { isHkSymbol } from "@/lib/futu/symbols";
+import { escapeHtml, sanitizeEmailIntro } from "@/lib/utils";
+import { formatAlertPrice } from "@/lib/alerts/money";
 
 type EmailSendResult =
     | { status: 'skipped' }
@@ -112,10 +112,8 @@ export const sendStockAlertEmail = async (
         }
 
         const isUpper = condition === 'ABOVE';
-        // Binance pairs are quoted in USDT, Hong Kong listings in HKD, everything else Finnhub prices here is USD
-        const money = (value: number) => symbol.startsWith('BINANCE:')
-            ? `${value.toLocaleString('en-US', { maximumFractionDigits: value < 1 ? 6 : 2 })} USDT`
-            : formatPrice(value, isHkSymbol(symbol) ? 'HKD' : 'USD');
+        // Binance pairs in USDT, Hong Kong listings in HKD, everything else in USD
+        const money = (value: number) => formatAlertPrice(symbol, value);
         const htmlTemplate = (isUpper ? STOCK_ALERT_UPPER_EMAIL_TEMPLATE : STOCK_ALERT_LOWER_EMAIL_TEMPLATE)
             .replaceAll('{{symbol}}', escapeHtml(symbol))
             .replaceAll('{{company}}', '') // Alerts don't store the company name

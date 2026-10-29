@@ -7,7 +7,7 @@ import { BellRing, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { deleteAlert } from "@/lib/actions/alert.actions";
 import { alertsEnabled } from "@/lib/market-data";
-import { formatPrice } from "@/lib/utils";
+import { formatAlertPrice } from "@/lib/alerts/money";
 
 type AlertRow = {
     _id: string;
@@ -80,7 +80,7 @@ export default function AlertsPanel({ alerts }: { alerts: AlertRow[] }) {
                             <div className="min-w-0 flex-1">
                                 <p className="mono font-semibold text-foreground">{alert.symbol}</p>
                                 <p className="num truncate text-[12.5px] text-faint">
-                                    {alert.condition === 'ABOVE' ? 'Above' : 'Below'} {formatPrice(alert.targetPrice)}
+                                    {alert.condition === 'ABOVE' ? 'Above' : 'Below'} {formatAlertPrice(alert.symbol, alert.targetPrice)}
                                     {alert.expiresAt && !alert.triggered && ` · until ${new Date(alert.expiresAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
                                 </p>
                             </div>
