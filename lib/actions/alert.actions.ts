@@ -4,7 +4,7 @@ import { connectToDatabase } from '@/database/mongoose';
 import { Alert } from '@/database/models/alert.model';
 import { revalidatePath } from 'next/cache';
 import { requireUserId } from '@/lib/better-auth/auth';
-import { hasFinnhubQuotes } from '@/lib/markets';
+import { hasFinnhubQuotes, hasFutuQuotes } from '@/lib/markets';
 import { alertsEnabled } from '@/lib/market-data';
 
 // A ticker (AAPL, BRK.B) or a Binance pair. Anything else, including markup, is rejected:
@@ -28,8 +28,11 @@ export async function createAlert(params: {
 
     if (!SYMBOL_PATTERN.test(symbol)) throw new Error('Invalid symbol');
     if (!CONDITIONS.includes(condition)) throw new Error('Invalid condition');
-    // The alert checker prices symbols through Finnhub, whose free plan covers US stocks and crypto
-    if (!hasFinnhubQuotes(symbol)) throw new Error('Alerts are available for US stocks and crypto');
+    // The alert checker prices US symbols through Finnhub and Hong Kong listings through Futu OpenD.
+    // Other markets have no source it can re-check every five minutes.
+    if (!hasFinnhubQuotes(symbol) && !hasFutuQuotes(symbol)) {
+        throw new Error('Alerts are available for US stocks, crypto and Hong Kong listings');
+    }
     if (!Number.isFinite(targetPrice) || targetPrice <= 0) throw new Error('Target price must be a positive number');
 
     await connectToDatabase();

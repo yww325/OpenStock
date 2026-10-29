@@ -9,7 +9,7 @@ import { getFutuSecurityInfo } from "@/lib/futu/quotes";
 import { HK_CURRENCY, isHkSymbol } from "@/lib/futu/symbols";
 import { HK_UNIVERSE_BY_SYMBOL } from "@/lib/futu/hk-universe";
 import { formatNumber, formatPrice, formatSymbolForTradingView } from "@/lib/utils";
-import { hasFinnhubQuotes } from "@/lib/markets";
+import { hasFinnhubQuotes, hasFutuQuotes } from "@/lib/markets";
 import { symbolInfoConfig } from "@/lib/constants";
 import TradingViewWidget from "@/components/TradingViewWidget";
 
@@ -27,7 +27,7 @@ async function TradingViewHeader({ symbol }: { symbol: string }) {
                 <div className="flex items-center gap-2">
                     <WatchlistButton symbol={symbol} company={symbol} isInWatchlist={isInWatchlist} />
                     <span className="pill h-9 px-3" title="Price alerts need a quote source we can check every 5 minutes">
-                        <Bell /> Alerts: US stocks and crypto
+                        <Bell /> Alerts: US, crypto and Hong Kong
                     </span>
                 </div>
             </div>
@@ -105,13 +105,13 @@ export default async function StockHeader({ symbol }: { symbol: string }) {
 
                 <div className="flex items-center gap-2">
                     <WatchlistButton symbol={symbol} company={company} isInWatchlist={isInWatchlist} />
-                    {hasFinnhubQuotes(symbol) ? (
+                    {hasFinnhubQuotes(symbol) || hasFutuQuotes(symbol) ? (
                         <CreateAlertModal symbol={symbol} currentPrice={quote?.c} currency={currency}>
                             <button type="button" className="btn btn-primary"><Bell /> Set alert</button>
                         </CreateAlertModal>
                     ) : (
                         <span className="pill h-9 px-3" title="Price alerts need a quote source we can check every 5 minutes">
-                            <Bell /> Alerts: US stocks and crypto
+                            <Bell /> Alerts: US, crypto and Hong Kong
                         </span>
                     )}
                 </div>

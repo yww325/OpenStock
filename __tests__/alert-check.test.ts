@@ -7,6 +7,7 @@ const find = vi.fn();
 const findOneAndUpdate = vi.fn();
 const findByIdAndUpdate = vi.fn();
 const getQuote = vi.fn();
+const getFutuQuotes = vi.fn();
 const sendStockAlertEmail = vi.fn();
 const findUser = vi.fn();
 
@@ -23,6 +24,7 @@ vi.mock('@/database/models/alert.model', () => ({
     },
 }));
 vi.mock('@/lib/actions/finnhub.actions', () => ({ getQuote: (...args: unknown[]) => getQuote(...args) }));
+vi.mock('@/lib/futu/quotes', () => ({ getFutuQuotes: (...args: unknown[]) => getFutuQuotes(...args) }));
 vi.mock('@/lib/nodemailer', () => ({ sendStockAlertEmail: (...args: unknown[]) => sendStockAlertEmail(...args) }));
 
 import { runStockAlertCheck } from '@/lib/alerts/check';
@@ -45,6 +47,7 @@ describe('runStockAlertCheck', () => {
         findOneAndUpdate.mockResolvedValue({ _id: 'alert-1' });
         findByIdAndUpdate.mockResolvedValue({});
         sendStockAlertEmail.mockResolvedValue({ status: 'sent', messageId: 'm1' });
+        getFutuQuotes.mockResolvedValue({});
     });
 
     it('emails the owner and closes the alert when the price crosses the target', async () => {
@@ -82,6 +85,20 @@ describe('runStockAlertCheck', () => {
         await expect(runStockAlertCheck()).resolves.toEqual({ processed: 2, triggered: 1 });
         expect(sendStockAlertEmail).toHaveBeenCalledTimes(1);
         expect(sendStockAlertEmail).toHaveBeenCalledWith(expect.objectContaining({ condition: 'BELOW', currentPrice: 90 }));
+    });
+
+    it('prices a Hong Kong listing through Futu, not Finnhub', async () => {
+        withAlerts([alert({ symbol: '0700.HK', condition: 'BELOW', targetPrice: 500 })]);
+        getFutuQuotes.mockResolvedValue({ '0700.HK': { c: 480.5 } });
+
+        await expect(runStockAlertCheck()).resolves.toEqual({ processed: 1, triggered: 1 });
+
+        expect(getFutuQuotes).toHaveBeenCalledWith(['0700.HK']);
+        expect(getQuote).not.toHaveBeenCalled();
+        expect(sendStockAlertEmail).toHaveBeenCalledWith(expect.objectContaining({
+            symbol: '0700.HK',
+            currentPrice: 480.5,
+        }));
     });
 
     it('does not email an alert another run already claimed', async () => {

@@ -72,8 +72,13 @@ describe('alert actions are scoped to the session user', () => {
     });
 
     it('refuses alerts the checker could never price', async () => {
-        await expect(createAlert({ symbol: 'RELIANCE.NS', targetPrice: 1000, condition: 'ABOVE' })).rejects.toThrow('US stocks and crypto');
+        await expect(createAlert({ symbol: 'RELIANCE.NS', targetPrice: 1000, condition: 'ABOVE' })).rejects.toThrow('US stocks, crypto and Hong Kong');
         expect(create).not.toHaveBeenCalled();
+    });
+
+    it('accepts a Hong Kong listing, which the checker prices through Futu OpenD', async () => {
+        await createAlert({ symbol: '0700.HK', targetPrice: 500, condition: 'BELOW' });
+        expect(create).toHaveBeenCalledWith(expect.objectContaining({ symbol: '0700.HK' }));
     });
 });
 

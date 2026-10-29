@@ -102,7 +102,7 @@
 
 ## ⏱️ How fresh is the data <a name="data-freshness"></a>
 
-Charts always stream live from TradingView. Quotes, watchlist prices and alerts come from Finnhub; Hong Kong prices come from your own Futu OpenD gateway:
+Charts always stream live from TradingView. Quotes, watchlist prices and alerts come from Finnhub, except Hong Kong prices and alerts, which come from your own Futu OpenD gateway:
 
 | | Quotes | Price alerts | Cost |
 |---|---|---|---|
@@ -262,14 +262,15 @@ __tests__/        Vitest tests
 
 ## 🌍 Market support <a name="market-support"></a>
 
-| Market | Charts (TradingView embeds) | Quotes, watchlist prices, alerts (Finnhub free) |
+| Market | Charts (TradingView embeds) | Quotes, watchlist prices, alerts |
 |---|---|---|
-| 🇺🇸 United States | Live | Yes |
-| Crypto (Binance pairs) | Live | Yes |
+| 🇺🇸 United States | Live | Yes (Finnhub) |
+| Crypto (Binance pairs) | Live | Yes (Finnhub) |
+| 🇭🇰 Hong Kong | Candles blocked; financials, technicals and profile work | Yes (Futu OpenD) |
 | Forex | Live | No |
 | 🇨🇦 Canada, 🇦🇺 Australia | Delayed | No |
 | 🇮🇳 India (BSE; `.NS` symbols chart on BSE), 🇩🇪 Germany | End of day | No |
-| London, Tokyo, Hong Kong, Korea and others | Candles blocked; financials, technicals and profile work | No |
+| London, Tokyo, Korea and others | Candles blocked; financials, technicals and profile work | No |
 
 The full table, and why some markets are limited, is in [MARKET_SUPPORT.md](MARKET_SUPPORT.md).
 

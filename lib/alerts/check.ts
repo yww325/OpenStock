@@ -5,6 +5,8 @@ import mongoose from 'mongoose';
 import { connectToDatabase } from '@/database/mongoose';
 import { Alert } from '@/database/models/alert.model';
 import { getQuote } from '@/lib/actions/finnhub.actions';
+import { getFutuQuotes } from '@/lib/futu/quotes';
+import { isHkSymbol } from '@/lib/futu/symbols';
 import { sendStockAlertEmail } from '@/lib/nodemailer';
 
 export type AlertCheckResult = { processed: number; triggered: number };
@@ -21,8 +23,24 @@ export async function runStockAlertCheck(): Promise<AlertCheckResult> {
 
     // One fresh quote per symbol, shared by every alert on it. No cache: a five-minute check
     // that reads an hour-old price is worse than no check.
+    const symbols = [...new Set(activeAlerts.map((alert) => alert.symbol))];
     const prices: Record<string, number> = {};
-    for (const symbol of new Set(activeAlerts.map((alert) => alert.symbol))) {
+
+    // Hong Kong listings come from the machine's own Futu OpenD gateway, in HKD.
+    const hongKong = symbols.filter(isHkSymbol);
+    if (hongKong.length) {
+        try {
+            const quotes = await getFutuQuotes(hongKong);
+            for (const symbol of hongKong) {
+                const price = quotes[symbol]?.c;
+                if (price) prices[symbol] = price;
+            }
+        } catch (error) {
+            console.error('Failed to fetch Hong Kong prices', error);
+        }
+    }
+
+    for (const symbol of symbols.filter((symbol) => !isHkSymbol(symbol))) {
         try {
             const quote = await getQuote(symbol);
             if (quote?.c) prices[symbol] = quote.c;

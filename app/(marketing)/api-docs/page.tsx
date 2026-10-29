@@ -16,6 +16,7 @@ const DATA_MODES = [
 
 const COVERAGE = [
     ['US stocks, crypto', 'Live', 'Yes'],
+    ['Hong Kong', 'Live via Futu OpenD', 'Yes'],
     ['Forex', 'Live', 'No'],
     ['Canada, Australia', 'Delayed', 'No'],
     ['India (BSE), Germany', 'End of day', 'No'],
@@ -26,7 +27,7 @@ const FLOW = ['A user signs up, or a cron fires', 'Inngest runs the function', '
 const JOBS = [
     { icon: Mail, title: 'Welcome email', trigger: 'On sign-up', body: 'An AI-written intro tailored to the country, goal, risk and industry picked at sign-up.' },
     { icon: BarChart2, title: 'Weekly news', trigger: 'Mon 09:00', body: 'Summarises the week’s market news and sends it as a Kit broadcast.' },
-    { icon: Clock, title: 'Price alerts', trigger: 'Every 5 min', body: 'Checks every active alert against Finnhub quotes and emails the owner when one fires. Realtime mode only.' },
+    { icon: Clock, title: 'Price alerts', trigger: 'Every 5 min', body: 'Checks every active alert against Finnhub (US, crypto) or Futu OpenD (Hong Kong) quotes and emails the owner when one fires.' },
     { icon: UserX, title: 'Re-engagement', trigger: 'Daily 10:00', body: 'Finds dormant accounts and sends a gentle nudge.' },
 ];
 

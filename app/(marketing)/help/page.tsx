@@ -21,11 +21,11 @@ const FAQS = [
     },
     {
         question: 'Where does the market data come from?',
-        answer: 'Charts come live from TradingView. Quotes, watchlist prices and alerts come from Finnhub; on this site they refresh hourly and every price shows when it was last traded.',
+        answer: 'Charts come live from TradingView. Quotes, watchlist prices and alerts come from Finnhub, except Hong Kong, which comes from your own Futu OpenD gateway. On this site they refresh hourly and every price shows when it was last traded.',
     },
     {
         question: 'Which markets are supported?',
-        answer: 'US stocks, crypto and forex live; Canada and Australia delayed; India (through BSE) and Germany end of day. Alerts work for US stocks and crypto.',
+        answer: 'US stocks, crypto and forex live; Canada and Australia delayed; India (through BSE) and Germany end of day. Alerts work for US stocks, crypto and Hong Kong listings.',
     },
     {
         question: 'My alert hasn’t fired.',

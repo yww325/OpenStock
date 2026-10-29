@@ -20,7 +20,7 @@ What OpenStock can show depends on three free data sources. This table was teste
 
 - **Dashboard:** pick a market (US, India, Germany, Canada, Australia, Hong Kong, Crypto, Forex). US and crypto tiles use our own cached Finnhub quotes, Hong Kong tiles our own Futu OpenD link; the others use TradingView quote tiles.
 - **Stock pages:** symbols Finnhub or Futu can price get the full header (live price, day range, market cap). Others get TradingView's quote panel.
-- **Alerts:** an OpenStock Cloud feature (or self-hosted in realtime mode). US stocks and crypto only, because the alert checker needs a quote source it can call every five minutes.
+- **Alerts:** an OpenStock Cloud feature, or self-hosted with `NEXT_PUBLIC_OPENSTOCK_ALERTS=enabled`. US stocks and crypto through Finnhub, Hong Kong listings through Futu OpenD: both are quote sources the checker can call every five minutes.
 - **Search:** Finnhub search returns listings worldwide, and Hong Kong listings come from the app's own list (`lib/futu/hk-universe.ts`), so they are found without an API key. On exchanges whose chart is blocked, the stock page links to the chart on TradingView instead (the list is `CHART_BLOCKED_EXCHANGES` in `lib/utils.ts`, each confirmed with two tickers).
 
 ## Hong Kong and Futu OpenD

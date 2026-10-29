@@ -114,8 +114,8 @@ export const GUIDES: Guide[] = [
             {
                 heading: 'When the email actually sends',
                 paragraphs: [
-                    'Alerts are checked every five minutes, and only in realtime mode. That is a self-hosted OpenStock with your own market-data key and NEXT_PUBLIC_OPENSTOCK_DATA_MODE=realtime, or OpenStock Cloud once it is on sale (planned at $5 a month). The email goes to the address on your account. An alert is an upper or lower target: greater than, or less than, a price you type.',
-                    'Alerts run for US stocks and crypto. Other markets can sit on the watchlist, but the free quote source used for alerts does not price them, so the alert will not fire.',
+                    'Alerts are checked every five minutes, and only where alerts are on: a self-hosted OpenStock with NEXT_PUBLIC_OPENSTOCK_ALERTS=enabled (or realtime mode), or OpenStock Cloud once it is on sale (planned at $5 a month). The email goes to the address on your account. An alert is an upper or lower target: greater than, or less than, a price you type.',
+                    'Alerts run for US stocks and crypto through Finnhub, and for Hong Kong listings through your own Futu OpenD gateway. Other markets can sit on the watchlist, but no quote source re-checks them every five minutes, so the alert will not fire.',
                 ],
             },
             {
@@ -236,7 +236,7 @@ export const GUIDES: Guide[] = [
                 heading: 'What works after you sign in',
                 paragraphs: [
                     'The India market on the dashboard lists liquid BSE names: Reliance, TCS, Infosys, HDFC Bank, and others. Quotes for India are end of day, not live. Search accepts the usual NSE-style suffix (.NS). The app maps that suffix onto BSE for the chart, because an NSE embed does not render under TradingView’s free widget licence. The same company on BSE is the one you see.',
-                    'Price alerts do not run for these symbols. Alerts need a quote the server can re-check every five minutes, and that path is US stocks and crypto only.',
+                    'Price alerts do not run for these symbols. Alerts need a quote the server can re-check every five minutes, and that path is US stocks, crypto and Hong Kong listings only.',
                 ],
             },
             {
@@ -263,7 +263,7 @@ export const GUIDES: Guide[] = [
             },
             {
                 question: 'Can I set an email alert on Reliance or TCS?',
-                answer: 'Not today. Email alerts run for US stocks and crypto only.',
+                answer: 'Not today. Email alerts run for US stocks, crypto and Hong Kong listings only.',
             },
         ],
     },
