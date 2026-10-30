@@ -82,7 +82,8 @@ async function getFinnhubRow(symbol: string): Promise<WatchlistRow> {
         price: quote?.c || 0,
         change: quote?.d || 0,
         changePercent: quote?.dp || 0,
-        currency: profile?.currency || 'USD',
+        // Finnhub quotes are in USD whatever the company reports in (CHA's profile says CNY)
+        currency: 'USD',
         name: profile?.name || symbol,
         logo: profile?.logo,
         marketCap: profile?.marketCapitalization,

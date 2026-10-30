@@ -68,7 +68,9 @@ export default async function StockHeader({ symbol }: { symbol: string }) {
     } else {
         const profile = await getCompanyProfile(symbol);
         company = profile?.name || symbol;
-        currency = profile?.currency || 'USD';
+        // Finnhub quotes every symbol it covers in USD. Its profile `currency` is the company's
+        // reporting currency (CNY for a Chinese ADR like CHA), not what the shares trade in.
+        currency = 'USD';
         marketCap = profile?.marketCapitalization;
         logo = profile?.logo;
         exchange = profile?.exchange;
