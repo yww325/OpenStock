@@ -3,10 +3,11 @@
 import { getDateRange, validateArticle, formatArticle } from '@/lib/utils';
 import { POPULAR_STOCKS } from '@/lib/constants';
 import { cache } from 'react';
-import { searchHongKong } from '@/lib/futu/hk-universe';
+import { hkName, searchHongKong } from '@/lib/futu/hk-universe';
 import { hasFinnhubQuotes } from '@/lib/markets';
 import { getSession } from '@/lib/better-auth/auth';
 import { finnhubKeys, isFinnhubConfigured } from '@/lib/finnhub/keys';
+import { NEWS_WINDOW_DAYS, fetchCompanyNews, newsQueryFor } from '@/lib/news/web-news';
 
 const FINNHUB_BASE_URL = 'https://finnhub.io/api/v1';
 let nextKeyIndex = 0;
@@ -236,32 +237,80 @@ export async function getStockMetrics(symbol: string): Promise<number | null> {
     }
 }
 
+// The name publishers use for a listing, which is what a news search needs. Hong Kong names come
+// from the app's own list; Finnhub's search knows the registered name of most other listings,
+// Hong Kong ones included. Without either, the symbol itself is the best query available.
+async function companyNewsName(symbol: string): Promise<string> {
+    const known = hkName(symbol);
+    if (known) return newsQueryFor(known);
+
+    if (finnhubKeys.length > 0) {
+        try {
+            const url = `${FINNHUB_BASE_URL}/search?q=${encodeURIComponent(symbol)}`;
+            const data = await fetchJSON<FinnhubSearchResponse>(url, 86400);
+            const match = data?.result?.find((r) => r.symbol?.toUpperCase() === symbol);
+            if (match?.description) return newsQueryFor(match.description);
+        } catch (e) {
+            logFailure('company name', symbol, e);
+        }
+    }
+
+    return symbol;
+}
+
+// Finnhub's free plan carries US coverage only: every other exchange answers 403, so those
+// symbols are not asked at all. Their news comes from the web feed instead.
+async function companyNewsFromFinnhub(symbol: string, range: { from: string; to: string }) {
+    if (finnhubKeys.length === 0 || !hasFinnhubQuotes(symbol)) return [] as RawNewsArticle[];
+    try {
+        const url = `${FINNHUB_BASE_URL}/company-news?symbol=${encodeURIComponent(symbol)}&from=${range.from}&to=${range.to}`;
+        const articles = await fetchJSON<RawNewsArticle[]>(url, 300);
+        return (articles || []).filter(validateArticle);
+    } catch (e) {
+        console.error('Error fetching company news for', symbol, e);
+        return [] as RawNewsArticle[];
+    }
+}
+
+// The same story reaches both feeds under different links (Finnhub's redirect, the publisher's
+// own URL), so headlines are compared as well as URLs.
+function mergeArticles(...lists: RawNewsArticle[][]) {
+    const seen = new Set<string>();
+    const merged: RawNewsArticle[] = [];
+
+    for (const article of lists.flat()) {
+        const headline = (article.headline || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+        const keys = [article.url || '', headline].filter(Boolean);
+        if (keys.length === 0 || keys.some((key) => seen.has(key))) continue;
+        keys.forEach((key) => seen.add(key));
+        merged.push(article);
+    }
+
+    return merged.sort((a, b) => (b.datetime || 0) - (a.datetime || 0));
+}
+
 export async function getNews(symbols?: string[]): Promise<MarketNewsArticle[]> {
     try {
-        const range = getDateRange(5);
-        if (finnhubKeys.length === 0) {
-            throw new MissingApiKeyError('FINNHUB API key is not configured');
-        }
+        const range = getDateRange(NEWS_WINDOW_DAYS);
         const cleanSymbols = (symbols || [])
             .map((s) => s?.trim().toUpperCase())
             .filter((s): s is string => Boolean(s));
 
         const maxArticles = 6;
 
-        // If we have symbols, try to fetch company news per symbol and round-robin select
+        // Company news first, per symbol, so the panel reads as the holdings it belongs to.
+        // Finnhub answers for US listings; the web feed answers for the rest and adds coverage
+        // Finnhub misses. A symbol with no stories in either simply contributes none.
         if (cleanSymbols.length > 0) {
             const perSymbolArticles: Record<string, RawNewsArticle[]> = {};
 
             await Promise.all(
                 cleanSymbols.map(async (sym) => {
-                    try {
-                        const url = `${FINNHUB_BASE_URL}/company-news?symbol=${encodeURIComponent(sym)}&from=${range.from}&to=${range.to}`;
-                        const articles = await fetchJSON<RawNewsArticle[]>(url, 300);
-                        perSymbolArticles[sym] = (articles || []).filter(validateArticle);
-                    } catch (e) {
-                        console.error('Error fetching company news for', sym, e);
-                        perSymbolArticles[sym] = [];
-                    }
+                    const [fromFinnhub, fromWeb] = await Promise.all([
+                        companyNewsFromFinnhub(sym, range),
+                        companyNewsName(sym).then((name) => fetchCompanyNews(name)),
+                    ]);
+                    perSymbolArticles[sym] = mergeArticles(fromFinnhub, fromWeb);
                 })
             );
 
@@ -285,7 +334,12 @@ export async function getNews(symbols?: string[]): Promise<MarketNewsArticle[]> 
                 collected.sort((a, b) => (b.datetime || 0) - (a.datetime || 0));
                 return collected.slice(0, maxArticles);
             }
-            // If none collected, fall through to general news
+            // Nothing for any symbol: fall through to general news, which the panel labels as
+            // market news rather than pretending it belongs to a holding.
+        }
+
+        if (finnhubKeys.length === 0) {
+            throw new MissingApiKeyError('FINNHUB API key is not configured');
         }
 
         // General market news fallback or when no symbols provided
