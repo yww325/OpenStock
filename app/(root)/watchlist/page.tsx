@@ -28,14 +28,19 @@ async function Symbols({ symbols }: { symbols: string[] }) {
     return <WatchlistTable initialRows={await getWatchlistData(symbols)} />;
 }
 
-async function News({ symbols }: { symbols: string[] }) {
-    return <NewsList news={await getNews(symbols).catch(() => [] as MarketNewsArticle[])} />;
+async function News({ symbols, names }: { symbols: string[]; names: Record<string, string> }) {
+    return <NewsList news={await getNews(symbols, names).catch(() => [] as MarketNewsArticle[])} />;
 }
 
 // DB reads render first; everything from Finnhub streams in behind skeletons.
 export default async function WatchlistPage() {
     const [items, alerts] = await Promise.all([getUserWatchlist(), getUserAlerts()]);
     const symbols: string[] = items.map((item: { symbol: string }) => item.symbol);
+    // The name each holding is known by locally: Hong Kong rows carry the Chinese name, which is
+    // the spelling the local press uses.
+    const names: Record<string, string> = Object.fromEntries(
+        items.map((item: { symbol: string; company?: string }) => [item.symbol, item.company || '']),
+    );
     const activeAlerts = alerts.filter((a: { triggered?: boolean }) => !a.triggered).length;
 
     return (
@@ -59,7 +64,7 @@ export default async function WatchlistPage() {
                     </Panel>
                     <Panel title="News" sub={symbols.length ? 'Latest stories for the symbols you watch' : 'General market news'}>
                         <Suspense fallback={<RowsSkeleton />}>
-                            <News symbols={symbols} />
+                            <News symbols={symbols} names={names} />
                         </Suspense>
                     </Panel>
                 </div>

@@ -7,7 +7,7 @@ import { hkName, searchHongKong } from '@/lib/futu/hk-universe';
 import { hasFinnhubQuotes } from '@/lib/markets';
 import { getSession } from '@/lib/better-auth/auth';
 import { finnhubKeys, isFinnhubConfigured } from '@/lib/finnhub/keys';
-import { NEWS_WINDOW_DAYS, fetchCompanyNews, newsQueryFor } from '@/lib/news/web-news';
+import { NEWS_WINDOW_DAYS, fetchCompanyNews } from '@/lib/news/web-news';
 
 const FINNHUB_BASE_URL = 'https://finnhub.io/api/v1';
 let nextKeyIndex = 0;
@@ -237,25 +237,38 @@ export async function getStockMetrics(symbol: string): Promise<number | null> {
     }
 }
 
-// The name publishers use for a listing, which is what a news search needs. Hong Kong names come
-// from the app's own list; Finnhub's search knows the registered name of most other listings,
-// Hong Kong ones included. Without either, the symbol itself is the best query available.
-async function companyNewsName(symbol: string): Promise<string> {
-    const known = hkName(symbol);
-    if (known) return newsQueryFor(known);
+// The names a listing is known by, most specific first. A news search needs the name
+// publishers use, and that differs by market: Hong Kong listings are written in Chinese in the
+// local press (绿茶集团, 赤峰黄金), while the registered English name is what English-language
+// outlets use. The watchlist row already carries the name the user added it under, so that is
+// the first answer; the app's own Hong Kong list and Finnhub's registered name follow.
+async function companyNewsNames(symbol: string, watchlistName?: string): Promise<string[]> {
+    const names: string[] = [];
+    const add = (value?: string | null) => {
+        const name = value?.trim();
+        if (name && !names.some((existing) => existing.toUpperCase() === name.toUpperCase())) {
+            names.push(name);
+        }
+    };
+
+    add(watchlistName);
+    add(hkName(symbol));
 
     if (finnhubKeys.length > 0) {
         try {
             const url = `${FINNHUB_BASE_URL}/search?q=${encodeURIComponent(symbol)}`;
             const data = await fetchJSON<FinnhubSearchResponse>(url, 86400);
             const match = data?.result?.find((r) => r.symbol?.toUpperCase() === symbol);
-            if (match?.description) return newsQueryFor(match.description);
+            add(match?.description);
         } catch (e) {
             logFailure('company name', symbol, e);
         }
     }
 
-    return symbol;
+    // Last resort: the symbol itself is what a story about a thinly covered listing carries.
+    if (names.length === 0) names.push(symbol);
+
+    return names;
 }
 
 // Finnhub's free plan carries US coverage only: every other exchange answers 403, so those
@@ -289,7 +302,9 @@ function mergeArticles(...lists: RawNewsArticle[][]) {
     return merged.sort((a, b) => (b.datetime || 0) - (a.datetime || 0));
 }
 
-export async function getNews(symbols?: string[]): Promise<MarketNewsArticle[]> {
+// `names` maps a symbol to the name its holder knows it by, so the news search can use the
+// spelling publishers use for that market.
+export async function getNews(symbols?: string[], names?: Record<string, string>): Promise<MarketNewsArticle[]> {
     try {
         const range = getDateRange(NEWS_WINDOW_DAYS);
         const cleanSymbols = (symbols || [])
@@ -308,7 +323,7 @@ export async function getNews(symbols?: string[]): Promise<MarketNewsArticle[]> 
                 cleanSymbols.map(async (sym) => {
                     const [fromFinnhub, fromWeb] = await Promise.all([
                         companyNewsFromFinnhub(sym, range),
-                        companyNewsName(sym).then((name) => fetchCompanyNews(name)),
+                        companyNewsNames(sym, names?.[sym]).then((variants) => fetchCompanyNews(variants)),
                     ]);
                     perSymbolArticles[sym] = mergeArticles(fromFinnhub, fromWeb);
                 })
